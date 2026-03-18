@@ -1,0 +1,1076 @@
+// Monte Carlo simulation engine for house vs rent analysis
+
+// Unit configuration for multi-family properties
+export interface Unit {
+  id: string              // "unit1", "unit2", etc.
+  name: string            // "Unit 1 (2BR/1BA)" for display
+  beds: number
+  baths: number
+  sqft?: number           // Optional, used for owner portion calc if available
+  monthlyRent: number     // Estimated market rent for this unit
+  ownerOccupied: boolean  // True if owner lives here
+}
+
+// Helper to create unit templates for common property types
+export function createMultiFamilyUnits(type: '2-family' | '3-family' | '4-family', config?: {
+  bedBathPerUnit?: Array<{ beds: number; baths: number; sqft?: number }>
+  estimatedRents?: number[]
+  ownerUnitIndex?: number  // Which unit owner lives in (0-indexed)
+}): Unit[] {
+  const numUnits = type === '2-family' ? 2 : type === '3-family' ? 3 : 4
+  const defaults: Record<string, Array<{ beds: number; baths: number; sqft?: number; rent: number }>> = {
+    '2-family': [
+      { beds: 2, baths: 1, rent: 2200 },
+      { beds: 3, baths: 1, rent: 2800 },
+    ],
+    '3-family': [
+      { beds: 2, baths: 1, rent: 2000 },
+      { beds: 2, baths: 1, rent: 2000 },
+      { beds: 2, baths: 1, rent: 2000 },
+    ],
+    '4-family': [
+      { beds: 2, baths: 1, rent: 1800 },
+      { beds: 2, baths: 1, rent: 1800 },
+      { beds: 2, baths: 1, rent: 1800 },
+      { beds: 2, baths: 1, rent: 1800 },
+    ],
+  }
+  
+  const unitDefaults = defaults[type]
+  const ownerUnitIndex = config?.ownerUnitIndex ?? 0
+  
+  return Array.from({ length: numUnits }, (_, i) => {
+    const defaultUnit = unitDefaults[i] || { beds: 2, baths: 1, rent: 2000 }
+    const unitConfig = config?.bedBathPerUnit?.[i] || defaultUnit
+    const rent = config?.estimatedRents?.[i] || defaultUnit.rent
+    return {
+      id: `unit${i + 1}`,
+      name: `Unit ${i + 1} (${unitConfig.beds}BR/${unitConfig.baths}BA)`,
+      beds: unitConfig.beds,
+      baths: unitConfig.baths,
+      sqft: unitConfig.sqft,
+      monthlyRent: rent,
+      ownerOccupied: i === ownerUnitIndex,
+    }
+  })
+}
+
+// Calculate summary from units
+export function getUnitSummary(units: Unit[]): {
+  totalBeds: number
+  totalBaths: number
+  totalRent: number
+  ownerPortion: number
+  rentalPortion: number
+  ownerUnit: Unit | undefined
+  rentalUnits: Unit[]
+} {
+  const ownerUnits = units.filter(u => u.ownerOccupied)
+  const rentalUnits = units.filter(u => !u.ownerOccupied)
+  const totalRent = rentalUnits.reduce((sum, u) => sum + u.monthlyRent, 0)
+  
+  // Calculate portions
+  const hasSqft = units.every(u => u.sqft && u.sqft > 0)
+  let ownerPortion: number
+  if (hasSqft) {
+    const totalSqft = units.reduce((sum, u) => sum + (u.sqft || 0), 0)
+    const ownerSqft = ownerUnits.reduce((sum, u) => sum + (u.sqft || 0), 0)
+    ownerPortion = ownerSqft / totalSqft
+  } else {
+    ownerPortion = ownerUnits.length / units.length
+  }
+  
+  return {
+    totalBeds: units.reduce((sum, u) => sum + u.beds, 0),
+    totalBaths: units.reduce((sum, u) => sum + u.baths, 0),
+    totalRent,
+    ownerPortion,
+    rentalPortion: 1 - ownerPortion,
+    ownerUnit: ownerUnits[0],
+    rentalUnits,
+  }
+}
+
+export interface SimulationParams {
+  // House
+  homePrice: number
+  downPaymentPercent: number
+  mortgageRate: number
+  propertyTaxRate: number
+  insuranceAnnual: number
+  maintenancePercent: number
+  
+  // Additional costs
+  closingCostPercent: number      // Upfront closing costs (2-5%)
+  hoaMonthly: number              // HOA fees
+  majorRepairReserve: number      // Annual reserve for major repairs (on top of maintenance)
+  
+  // Multi-family configuration
+  units: Unit[]                   // Empty array = single-family mode (uses legacy rentalIncome)
+  
+  // House hack (legacy single-family mode, ignored if units[] is populated)
+  houseHack: boolean
+  rentalIncome: number
+  rentalIncomeGrowth: number      // Annual growth rate
+  vacancyRate: number             // % of year unit is vacant (0-1)
+  
+  // Tax
+  w2Income: number
+  federalBracket: number
+  stateRate: number
+  filingStatus: 'single' | 'married'  // Affects standard deduction & cap gains exemption
+  buildingValuePercent: number        // % of home value that's building (not land) — affects depreciation
+  
+  // Alternative
+  currentRent: number
+  rentGrowth: number
+  
+  // Distributions (mean, stdDev)
+  appreciationMean: number
+  appreciationStdDev: number
+  stockReturnMean: number
+  stockReturnStdDev: number
+  marketCorrelation: number        // Correlation between housing & stocks (0-1)
+  
+  // Cost growth
+  propertyTaxGrowth: number        // Annual property tax increase
+  insuranceGrowth: number          // Annual insurance cost increase
+  
+  // Exit costs
+  sellingCostPercent: number       // Realtor + closing when selling (5-6%)
+  capitalGainsTaxRate: number      // Tax on gains above $250k exemption
+  
+  // First-time homebuyer benefits
+  firstTimeHomeBuyer: {
+    enabled: boolean
+    noPMI: boolean                   // ONE Mortgage / MassHousing - no PMI
+    downPaymentAssistance: number    // Grant/loan amount (e.g., $15k-$50k)
+    lowerRate: boolean               // Some programs offer 0.25-0.5% lower rates
+    rateDiscount: number             // Rate discount amount (e.g., 0.005 = 0.5%)
+    taxCredit: number                // Annual tax credit (e.g., MCC = mortgage interest credit)
+  }
+  
+  // Simulation
+  years: number
+  numSimulations: number
+  
+  // HELOC strategy
+  heloc: {
+    enabled: boolean
+    minEquityPercent: number    // Min equity % before taking HELOC (e.g., 30%)
+    maxLTV: number              // Max combined LTV (e.g., 80%)
+    rate: number                // HELOC interest rate
+    deployToStocks: boolean     // Deploy HELOC proceeds to stocks
+  }
+  
+  // Scenarios
+  scenarios: {
+    jobLoss?: { probability: number; yearRange: [number, number]; durationMonths: number }
+    refinance?: { probability: number; yearRange: [number, number]; newRate: number }
+    earlySale?: { probability: number; yearRange: [number, number]; sellingCostPercent: number }
+  }
+}
+
+export interface YearResult {
+  year: number
+  // Buy scenario
+  homeValue: number
+  loanBalance: number
+  helocBalance: number
+  equity: number
+  stocksFromHeloc: number  // Stocks purchased with HELOC proceeds
+  buyerStockPortfolio: number  // Stocks from rent savings when buying is cheaper (Samar fix)
+  yearCostBuy: number
+  cumulativeCostBuy: number
+  wealthBuy: number        // equity + stocks - heloc debt + buyer savings
+  // Rent scenario
+  yearRent: number
+  cumulativeCostRent: number
+  stockPortfolio: number
+  wealthRent: number
+  // Delta
+  delta: number
+  // Events
+  events: string[]
+}
+
+export interface SimulationRun {
+  id: number
+  years: YearResult[]
+  finalWealthBuy: number
+  finalWealthRent: number
+  finalDelta: number
+  events: string[]
+  exitDetails?: {
+    sellingCosts: number
+    capitalGainsTax: number
+    depreciationRecapture: number
+    netProceeds: number
+  }
+}
+
+export interface SimulationSummary {
+  // Percentile results for each year
+  yearlyStats: {
+    year: number
+    wealthBuy: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number }
+    wealthRent: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number }
+    delta: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number }
+  }[]
+  // Final outcomes
+  finalStats: {
+    wealthBuy: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number; min: number; max: number }
+    wealthRent: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number; min: number; max: number }
+    delta: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number; min: number; max: number }
+    buyWinsProbability: number
+  }
+  // All runs (for detailed analysis)
+  runs: SimulationRun[]
+}
+
+// Box-Muller transform for normal distribution
+function randomNormal(mean: number, stdDev: number): number {
+  const u1 = Math.random()
+  const u2 = Math.random()
+  const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
+  return z0 * stdDev + mean
+}
+
+// Generate correlated normal random variables
+function correlatedNormals(
+  mean1: number, std1: number,
+  mean2: number, std2: number,
+  correlation: number
+): [number, number] {
+  const u1 = Math.random()
+  const u2 = Math.random()
+  const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
+  const z2 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2)
+  
+  // Create correlated z2
+  const z2Correlated = correlation * z1 + Math.sqrt(1 - correlation * correlation) * z2
+  
+  return [
+    z1 * std1 + mean1,
+    z2Correlated * std2 + mean2
+  ]
+}
+
+// Percentile calculation
+function percentile(arr: number[], p: number): number {
+  const sorted = [...arr].sort((a, b) => a - b)
+  const idx = (p / 100) * (sorted.length - 1)
+  const lower = Math.floor(idx)
+  const upper = Math.ceil(idx)
+  if (lower === upper) return sorted[lower]
+  return sorted[lower] + (sorted[upper] - sorted[lower]) * (idx - lower)
+}
+
+function mean(arr: number[]): number {
+  return arr.reduce((a, b) => a + b, 0) / arr.length
+}
+
+export function runSimulation(params: SimulationParams): SimulationSummary {
+  const runs: SimulationRun[] = []
+  
+  for (let sim = 0; sim < params.numSimulations; sim++) {
+    const run = simulateSingleRun(params, sim)
+    runs.push(run)
+  }
+  
+  // Calculate yearly statistics
+  const yearlyStats = []
+  for (let year = 1; year <= params.years; year++) {
+    const wealthBuyValues = runs.map(r => r.years[year - 1]?.wealthBuy || 0)
+    const wealthRentValues = runs.map(r => r.years[year - 1]?.wealthRent || 0)
+    const deltaValues = runs.map(r => r.years[year - 1]?.delta || 0)
+    
+    yearlyStats.push({
+      year,
+      wealthBuy: {
+        p10: percentile(wealthBuyValues, 10),
+        p25: percentile(wealthBuyValues, 25),
+        p50: percentile(wealthBuyValues, 50),
+        p75: percentile(wealthBuyValues, 75),
+        p90: percentile(wealthBuyValues, 90),
+        mean: mean(wealthBuyValues),
+      },
+      wealthRent: {
+        p10: percentile(wealthRentValues, 10),
+        p25: percentile(wealthRentValues, 25),
+        p50: percentile(wealthRentValues, 50),
+        p75: percentile(wealthRentValues, 75),
+        p90: percentile(wealthRentValues, 90),
+        mean: mean(wealthRentValues),
+      },
+      delta: {
+        p10: percentile(deltaValues, 10),
+        p25: percentile(deltaValues, 25),
+        p50: percentile(deltaValues, 50),
+        p75: percentile(deltaValues, 75),
+        p90: percentile(deltaValues, 90),
+        mean: mean(deltaValues),
+      },
+    })
+  }
+  
+  // Final statistics
+  const finalWealthBuy = runs.map(r => r.finalWealthBuy)
+  const finalWealthRent = runs.map(r => r.finalWealthRent)
+  const finalDelta = runs.map(r => r.finalDelta)
+  
+  return {
+    yearlyStats,
+    finalStats: {
+      wealthBuy: {
+        p10: percentile(finalWealthBuy, 10),
+        p25: percentile(finalWealthBuy, 25),
+        p50: percentile(finalWealthBuy, 50),
+        p75: percentile(finalWealthBuy, 75),
+        p90: percentile(finalWealthBuy, 90),
+        mean: mean(finalWealthBuy),
+        min: Math.min(...finalWealthBuy),
+        max: Math.max(...finalWealthBuy),
+      },
+      wealthRent: {
+        p10: percentile(finalWealthRent, 10),
+        p25: percentile(finalWealthRent, 25),
+        p50: percentile(finalWealthRent, 50),
+        p75: percentile(finalWealthRent, 75),
+        p90: percentile(finalWealthRent, 90),
+        mean: mean(finalWealthRent),
+        min: Math.min(...finalWealthRent),
+        max: Math.max(...finalWealthRent),
+      },
+      delta: {
+        p10: percentile(finalDelta, 10),
+        p25: percentile(finalDelta, 25),
+        p50: percentile(finalDelta, 50),
+        p75: percentile(finalDelta, 75),
+        p90: percentile(finalDelta, 90),
+        mean: mean(finalDelta),
+        min: Math.min(...finalDelta),
+        max: Math.max(...finalDelta),
+      },
+      buyWinsProbability: finalDelta.filter(d => d > 0).length / finalDelta.length,
+    },
+    runs,
+  }
+}
+
+function simulateSingleRun(params: SimulationParams, runId: number): SimulationRun {
+  const {
+    homePrice, downPaymentPercent, mortgageRate, propertyTaxRate,
+    insuranceAnnual, maintenancePercent, houseHack, rentalIncome,
+    rentalIncomeGrowth, w2Income, federalBracket, stateRate,
+    currentRent, rentGrowth, appreciationMean, appreciationStdDev,
+    stockReturnMean, stockReturnStdDev, years, scenarios, heloc,
+  } = params
+  
+  // Multi-family vs single-family mode
+  const units = params.units || []
+  const isMultiFamily = units.length > 0
+  
+  // Calculate rental income and owner/rental portions from units
+  let effectiveRentalIncome: number
+  let ownerPortionCalc: number
+  let rentalPortionCalc: number
+  
+  if (isMultiFamily) {
+    // Multi-family: sum rent from non-owner-occupied units
+    const ownerUnits = units.filter(u => u.ownerOccupied)
+    const rentalUnits = units.filter(u => !u.ownerOccupied)
+    effectiveRentalIncome = rentalUnits.reduce((sum, u) => sum + u.monthlyRent, 0)
+    
+    // Calculate portion by sqft if available, otherwise by unit count
+    const hasSqft = units.every(u => u.sqft && u.sqft > 0)
+    if (hasSqft) {
+      const totalSqft = units.reduce((sum, u) => sum + (u.sqft || 0), 0)
+      const ownerSqft = ownerUnits.reduce((sum, u) => sum + (u.sqft || 0), 0)
+      ownerPortionCalc = ownerSqft / totalSqft
+    } else {
+      // Fall back to unit count
+      ownerPortionCalc = ownerUnits.length / units.length
+    }
+    rentalPortionCalc = 1 - ownerPortionCalc
+  } else {
+    // Legacy single-family mode
+    effectiveRentalIncome = houseHack ? rentalIncome : 0
+    ownerPortionCalc = houseHack ? 0.50 : 1.0
+    rentalPortionCalc = houseHack ? 0.50 : 0
+  }
+  
+  // First-time homebuyer adjustments
+  const fthb = params.firstTimeHomeBuyer || { enabled: false, noPMI: false, downPaymentAssistance: 0, lowerRate: false, rateDiscount: 0, taxCredit: 0 }
+  const effectiveDownPaymentAssistance = fthb.enabled ? (fthb.downPaymentAssistance || 0) : 0
+  const effectiveMortgageRate = fthb.enabled && fthb.lowerRate ? mortgageRate - (fthb.rateDiscount || 0) : mortgageRate
+  
+  // Initial state
+  const downPayment = homePrice * (downPaymentPercent / 100)
+  const closingCosts = homePrice * (params.closingCostPercent / 100)
+  const totalUpfrontCost = downPayment + closingCosts - effectiveDownPaymentAssistance  // DPA reduces capital needed
+  let loanAmount = homePrice - downPayment
+  let homeValue = homePrice
+  let stockPortfolio = Math.max(0, totalUpfrontCost)  // Rent scenario invests the capital (can't be negative)
+  let buyerStockPortfolio = 0  // Buyer's savings when housing cost < market rent (Samar fix)
+  let currentRentAmount = currentRent
+  let currentRentalIncome = effectiveRentalIncome
+  
+  // HELOC state
+  let helocBalance = 0
+  let stocksFromHeloc = 0  // Stocks purchased with HELOC proceeds
+  
+  let cumulativeCostBuy = totalUpfrontCost  // Includes closing costs
+  let cumulativeCostRent = 0
+  let cumulativeTaxSavings = 0
+  let cumulativeDepreciation = 0  // Track for depreciation recapture on sale
+  
+  // Monthly P&I calculation (using effective rate with FTHB discount)
+  const monthlyRate = effectiveMortgageRate / 12
+  const numPayments = 360
+  const monthlyPI = loanAmount > 0 
+    ? loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1)
+    : 0
+  const annualPI = monthlyPI * 12
+  
+  // Track events
+  const allEvents: string[] = []
+  const yearResults: YearResult[] = []
+  
+  // Scenario state
+  let sold = false
+  let currentMortgageRate = mortgageRate
+  let jobLossActive = false
+  let jobLossEnd = 0
+  
+  for (let year = 1; year <= years; year++) {
+    if (sold) {
+      // After selling, just track stock portfolio growth
+      const stockReturn = randomNormal(stockReturnMean, stockReturnStdDev)
+      stockPortfolio *= (1 + stockReturn)
+      
+      yearResults.push({
+        year,
+        homeValue: 0,
+        loanBalance: 0,
+        helocBalance: 0,
+        equity: 0,
+        stocksFromHeloc: 0,
+        buyerStockPortfolio: 0,
+        yearCostBuy: 0,
+        cumulativeCostBuy,
+        wealthBuy: stockPortfolio,  // After sale, wealth is in stocks
+        yearRent: currentRentAmount * 12,
+        cumulativeCostRent: cumulativeCostRent + currentRentAmount * 12,
+        stockPortfolio,
+        wealthRent: stockPortfolio,
+        delta: 0,
+        events: ['Sold'],
+      })
+      currentRentAmount *= (1 + rentGrowth)
+      cumulativeCostRent += currentRentAmount * 12
+      continue
+    }
+    
+    const events: string[] = []
+    
+    // Check for job loss scenario
+    if (scenarios.jobLoss && !jobLossActive) {
+      const { probability, yearRange, durationMonths } = scenarios.jobLoss
+      if (year >= yearRange[0] && year <= yearRange[1] && Math.random() < probability) {
+        jobLossActive = true
+        jobLossEnd = year + Math.ceil(durationMonths / 12)
+        events.push(`Job loss (${durationMonths}mo)`)
+        allEvents.push(`Year ${year}: Job loss`)
+      }
+    }
+    if (jobLossActive && year >= jobLossEnd) {
+      jobLossActive = false
+      events.push('Job recovered')
+    }
+    
+    // Check for refinance scenario
+    if (scenarios.refinance) {
+      const { probability, yearRange, newRate } = scenarios.refinance
+      if (year >= yearRange[0] && year <= yearRange[1] && Math.random() < probability && newRate < currentMortgageRate) {
+        // Refinance closing costs (~1.5% of remaining loan balance)
+        const refiClosingCosts = loanAmount * 0.015
+        cumulativeCostBuy += refiClosingCosts
+        
+        currentMortgageRate = newRate
+        events.push(`Refinanced to ${(newRate * 100).toFixed(2)}% (cost: $${Math.round(refiClosingCosts).toLocaleString()})`)
+        allEvents.push(`Year ${year}: Refinanced`)
+      }
+    }
+    
+    // Check for early sale scenario
+    if (scenarios.earlySale) {
+      const { probability, yearRange, sellingCostPercent } = scenarios.earlySale
+      if (year >= yearRange[0] && year <= yearRange[1] && Math.random() < probability) {
+        // Calculate taxes on early sale
+        const earlySaleSellingCosts = homeValue * (sellingCostPercent / 100)
+        const earlySaleGain = homeValue - homePrice
+        const earlySaleCapGainsExemption = params.filingStatus === 'married' ? 500000 : 250000
+        const earlySaleTaxableGain = Math.max(0, earlySaleGain - earlySaleCapGainsExemption)
+        const earlySaleCapGainsTax = earlySaleTaxableGain * (params.capitalGainsTaxRate || 0.15)
+        const earlySaleDepRecapture = cumulativeDepreciation * 0.25
+        
+        const saleProceeds = homeValue - loanAmount - earlySaleSellingCosts - earlySaleCapGainsTax - earlySaleDepRecapture
+        sold = true
+        events.push(`Sold (proceeds: $${Math.round(saleProceeds).toLocaleString()})`)
+        allEvents.push(`Year ${year}: Sold house`)
+        
+        // When selling, pay off HELOC from proceeds
+        const netSaleProceeds = saleProceeds - helocBalance + stocksFromHeloc
+        yearResults.push({
+          year,
+          homeValue,
+          loanBalance: loanAmount,
+          helocBalance: 0,
+          equity: netSaleProceeds,
+          stocksFromHeloc: 0,
+          buyerStockPortfolio,
+          yearCostBuy: 0,
+          cumulativeCostBuy,
+          wealthBuy: netSaleProceeds + buyerStockPortfolio,
+          yearRent: currentRentAmount * 12,
+          cumulativeCostRent: cumulativeCostRent + currentRentAmount * 12,
+          stockPortfolio,
+          wealthRent: stockPortfolio,
+          delta: netSaleProceeds + buyerStockPortfolio - stockPortfolio,
+          events,
+        })
+        continue
+      }
+    }
+    
+    // Sample correlated returns for this year
+    const [appreciation, stockReturn] = correlatedNormals(
+      appreciationMean, appreciationStdDev,
+      stockReturnMean, stockReturnStdDev,
+      params.marketCorrelation || 0.3  // Default 0.3 correlation
+    )
+    
+    // House appreciates
+    homeValue *= (1 + appreciation)
+    
+    // Annual costs (with growth)
+    // Property tax: based on original purchase price, growing at assessment rate
+    // (assessed values typically lag market values)
+    const taxGrowthFactor = Math.pow(1 + (params.propertyTaxGrowth || 0.02), year - 1)
+    const insuranceGrowthFactor = Math.pow(1 + (params.insuranceGrowth || 0.05), year - 1)
+    
+    const annualPropertyTax = homePrice * propertyTaxRate * taxGrowthFactor
+    const annualInsurance = insuranceAnnual * insuranceGrowthFactor
+    const annualMaintenance = homeValue * maintenancePercent
+    const annualPMI = (fthb.enabled && fthb.noPMI) ? 0 : ((loanAmount / homeValue) > 0.8 ? loanAmount * 0.005 : 0)
+    const annualHOA = (params.hoaMonthly || 0) * 12 * Math.pow(1.03, year - 1)  // HOA grows 3%/yr
+    const annualMajorRepairs = params.majorRepairReserve || 0
+    
+    // Recalculate P&I if refinanced
+    let currentAnnualPI = annualPI
+    if (currentMortgageRate !== mortgageRate) {
+      const newMonthlyRate = currentMortgageRate / 12
+      const remainingPayments = 360 - (year - 1) * 12
+      if (remainingPayments > 0 && loanAmount > 0) {
+        const newMonthlyPI = loanAmount * (newMonthlyRate * Math.pow(1 + newMonthlyRate, remainingPayments)) / 
+                             (Math.pow(1 + newMonthlyRate, remainingPayments) - 1)
+        currentAnnualPI = newMonthlyPI * 12
+      }
+    }
+    
+    const totalAnnualCost = currentAnnualPI + annualPropertyTax + annualInsurance + annualMaintenance + annualPMI + annualHOA + annualMajorRepairs
+    
+    // Interest and principal (more accurate amortization estimate)
+    // At 6.75%, 30yr: Year 1 ~85% interest, Year 15 ~53%, Year 30 ~5%
+    // Using exponential decay: interestPortion = 0.85 * 0.97^(year-1)
+    const interestPortion = Math.max(0.05, 0.85 * Math.pow(0.97, year - 1))
+    const yearInterest = currentAnnualPI * interestPortion
+    const yearPrincipal = currentAnnualPI - yearInterest
+    loanAmount = Math.max(0, loanAmount - yearPrincipal)
+    
+    // Tax savings (updated for OBBBA 2025)
+    // $750k mortgage interest deduction cap (OBBBA made permanent)
+    const maxDeductibleDebt = 750000
+    const effectiveLoanForDeduction = Math.min(loanAmount + yearPrincipal, maxDeductibleDebt)
+    const cappedInterestDeduction = yearInterest * (effectiveLoanForDeduction / Math.max(1, loanAmount + yearPrincipal))
+    
+    // PMI now deductible as mortgage interest (OBBBA 2026+)
+    const mortgageInterestDeduction = cappedInterestDeduction + annualPMI
+    
+    // SALT cap increased to $40k (OBBBA) for incomes < $500k, phased out above
+    const stateIncomeTax = w2Income * stateRate
+    const saltTotal = annualPropertyTax + stateIncomeTax
+    let saltCap = 40000
+    if (w2Income > 500000) {
+      // Phase out: reduced by 30% of excess over $500k until hits $10k floor
+      const excess = w2Income - 500000
+      saltCap = Math.max(10000, 40000 - excess * 0.30)
+    }
+    const saltDeduction = Math.min(saltTotal, saltCap)
+    
+    // HELOC interest NOT deductible for non-home purposes (OBBBA confirmed)
+    // helocInterestCost is a cost, not a deduction
+    
+    // Rental income (calculate early for tax purposes)
+    const vacancyAdjustment = 1 - (params.vacancyRate || 0)
+    const hasRentalIncome = isMultiFamily || houseHack
+    const yearRentalIncome = hasRentalIncome ? currentRentalIncome * 12 * vacancyAdjustment : 0
+    
+    // Rental depreciation (if renting out any portion)
+    let rentalDepreciation = 0
+    let rentalExpenseDeduction = 0
+    if (hasRentalIncome && yearRentalIncome > 0) {
+      // Depreciation: rental portion of building value over 27.5 years
+      const buildingValuePct = params.buildingValuePercent || 0.80  // Default 80% building, 20% land
+      const buildingValue = homePrice * buildingValuePct
+      // Use calculated rental portion (from units or legacy 0.50)
+      rentalDepreciation = (buildingValue * rentalPortionCalc) / 27.5
+      
+      // Rental expenses (rental portion of deductible costs)
+      const rentalShareInterest = cappedInterestDeduction * rentalPortionCalc
+      const rentalShareTax = annualPropertyTax * rentalPortionCalc
+      const rentalShareInsurance = annualInsurance * rentalPortionCalc
+      const rentalShareHOA = annualHOA * rentalPortionCalc
+      
+      // Schedule E: Rental income - expenses - depreciation
+      const scheduleEIncome = yearRentalIncome
+      const scheduleEExpenses = rentalShareInterest + rentalShareTax + rentalShareInsurance + rentalShareHOA + rentalDepreciation
+      rentalExpenseDeduction = Math.min(scheduleEExpenses, scheduleEIncome)  // Can't exceed income (passive loss limits simplified)
+      
+      // Reduce owner-occupied deductions by rental portion
+      // (Interest/tax already split - owner gets remaining portion)
+      
+      // Track cumulative depreciation for recapture on sale
+      cumulativeDepreciation += rentalDepreciation
+    }
+    
+    // Total itemized (owner-occupied portion only)
+    // Use calculated owner portion (from units or legacy)
+    const ownerInterestDeduction = mortgageInterestDeduction * ownerPortionCalc
+    const ownerSaltDeduction = saltDeduction * ownerPortionCalc
+    const totalItemized = ownerInterestDeduction + ownerSaltDeduction
+    const standardDeduction = params.filingStatus === 'married' ? 31000 : 15500  // 2026 estimate
+    const itemizedBenefit = Math.max(0, totalItemized - standardDeduction)
+    
+    // Total tax savings: itemized benefit + rental deduction benefit
+    const fthbTaxCredit = (fthb.enabled && fthb.taxCredit) ? fthb.taxCredit : 0
+    const ownerOccupiedSavings = itemizedBenefit * (federalBracket + stateRate * 0.5)
+    const rentalTaxSavings = rentalExpenseDeduction * federalBracket  // Rental losses offset at marginal rate
+    const yearTaxSavings = jobLossActive ? 0 : ownerOccupiedSavings + rentalTaxSavings + fthbTaxCredit
+    cumulativeTaxSavings += yearTaxSavings
+    
+    // Update rental income for next year (already calculated yearRentalIncome above)
+    currentRentalIncome *= (1 + rentalIncomeGrowth)
+    
+    // Net cost of buying (add HELOC interest if applicable)
+    const helocInterestCost = helocBalance * (heloc?.rate || 0)
+    const yearCostBuy = totalAnnualCost - yearRentalIncome - yearTaxSavings + helocInterestCost
+    cumulativeCostBuy += yearCostBuy
+    
+    // Equity (before HELOC)
+    const grossEquity = homeValue - loanAmount
+    
+    // --- HELOC STRATEGY ---
+    // Check if we can/should take out a HELOC
+    if (heloc?.enabled && year >= 2) {
+      const equityPercent = grossEquity / homeValue
+      const currentLTV = loanAmount / homeValue
+      const maxHelocAmount = homeValue * heloc.maxLTV - loanAmount - helocBalance
+      
+      // Take HELOC if: enough equity AND room under max LTV
+      if (equityPercent >= heloc.minEquityPercent && maxHelocAmount > 10000) {
+        // Take out 80% of available HELOC room (conservative)
+        const helocDraw = maxHelocAmount * 0.8
+        helocBalance += helocDraw
+        
+        if (heloc.deployToStocks) {
+          // Invest HELOC proceeds in stocks
+          stocksFromHeloc += helocDraw
+          events.push(`HELOC draw: $${Math.round(helocDraw).toLocaleString()} → stocks`)
+          allEvents.push(`Year ${year}: HELOC $${Math.round(helocDraw/1000)}k`)
+        }
+      }
+    }
+    
+    // Stocks from HELOC grow with market
+    stocksFromHeloc *= (1 + stockReturn)
+    
+    // Net equity = home value - mortgage - HELOC
+    const equity = grossEquity - helocBalance
+    
+    // Wealth from buying = net equity + stocks from HELOC
+    // Wealth from buying = net equity + stocks from HELOC + stocks from rent savings (Samar fix)
+    const wealthBuy = equity + stocksFromHeloc + buyerStockPortfolio
+    
+    // --- RENT SCENARIO ---
+    // Rent increases annually
+    const yearRent = currentRentAmount * 12
+    currentRentAmount *= (1 + rentGrowth)
+    cumulativeCostRent += yearRent
+    
+    // Stock portfolios grow, plus we invest the difference
+    // KEY: As rent grows, renter has LESS to invest each year
+    // Samar fix: Buyer also invests savings when housing cost < market rent
+    const monthlySavingsDiff = (yearCostBuy - yearRent) / 12
+    if (monthlySavingsDiff > 0) {
+      // Buying costs more, so renter invests the difference throughout the year
+      // Simplified: invest half at start of year, half grows full year
+      stockPortfolio = stockPortfolio * (1 + stockReturn) + monthlySavingsDiff * 6 * (1 + stockReturn / 2)
+      // Buyer has no savings to invest
+      buyerStockPortfolio = buyerStockPortfolio * (1 + stockReturn)
+    } else {
+      // Buying costs less (house hack effective)
+      // Renter just pays rent, portfolio grows but no new investment
+      stockPortfolio = stockPortfolio * (1 + stockReturn)
+      // Buyer invests the savings (negative diff = positive savings for buyer)
+      const buyerMonthlySavings = -monthlySavingsDiff
+      buyerStockPortfolio = buyerStockPortfolio * (1 + stockReturn) + buyerMonthlySavings * 6 * (1 + stockReturn / 2)
+    }
+    
+    // Note: Rent inflation is already modeled via rentGrowth - currentRentAmount grows each year
+    // This means yearRent increases, eating into renter's ability to save
+    
+    const wealthRent = stockPortfolio
+    const delta = wealthBuy - wealthRent
+    
+    yearResults.push({
+      year,
+      homeValue: Math.round(homeValue),
+      loanBalance: Math.round(loanAmount),
+      helocBalance: Math.round(helocBalance),
+      equity: Math.round(equity),
+      stocksFromHeloc: Math.round(stocksFromHeloc),
+      buyerStockPortfolio: Math.round(buyerStockPortfolio),
+      yearCostBuy: Math.round(yearCostBuy),
+      cumulativeCostBuy: Math.round(cumulativeCostBuy),
+      wealthBuy: Math.round(wealthBuy),
+      yearRent: Math.round(yearRent),
+      cumulativeCostRent: Math.round(cumulativeCostRent),
+      stockPortfolio: Math.round(stockPortfolio),
+      wealthRent: Math.round(wealthRent),
+      delta: Math.round(delta),
+      events,
+    })
+  }
+  
+  const lastYear = yearResults[yearResults.length - 1]
+  
+  // Calculate exit costs and capital gains tax
+  const finalHomeValue = lastYear?.homeValue || 0
+  const finalLoanBalance = lastYear?.loanBalance || 0
+  const finalHelocBalance = lastYear?.helocBalance || 0
+  const finalStocksFromHeloc = lastYear?.stocksFromHeloc || 0
+  
+  // Selling costs (6% of home value)
+  const sellingCosts = finalHomeValue * (params.sellingCostPercent / 100)
+  
+  // Capital gains (appreciation above purchase price, minus exemption)
+  // $250k for single, $500k for married filing jointly
+  const capGainsExemption = params.filingStatus === 'married' ? 500000 : 250000
+  const totalGain = finalHomeValue - homePrice
+  const taxableGain = Math.max(0, totalGain - capGainsExemption)
+  const capitalGainsTax = taxableGain * (params.capitalGainsTaxRate || 0.15)
+  
+  // Depreciation recapture (25% rate on depreciation taken)
+  const depreciationRecapture = cumulativeDepreciation * 0.25
+  
+  // Net proceeds from sale (includes depreciation recapture)
+  const saleProceeds = finalHomeValue - finalLoanBalance - finalHelocBalance - sellingCosts - capitalGainsTax - depreciationRecapture
+  const finalBuyerStockPortfolio = lastYear?.buyerStockPortfolio || 0
+  const finalWealthBuyNet = saleProceeds + finalStocksFromHeloc + finalBuyerStockPortfolio
+  
+  const finalWealthRent = lastYear?.wealthRent || 0
+  
+  return {
+    id: runId,
+    years: yearResults,
+    finalWealthBuy: Math.round(finalWealthBuyNet),
+    finalWealthRent: finalWealthRent,
+    finalDelta: Math.round(finalWealthBuyNet - finalWealthRent),
+    events: allEvents,
+    exitDetails: {
+      sellingCosts: Math.round(sellingCosts),
+      capitalGainsTax: Math.round(capitalGainsTax),
+      depreciationRecapture: Math.round(depreciationRecapture),
+      netProceeds: Math.round(saleProceeds),
+    }
+  }
+}
+
+// Default parameters based on Cambridge, MA scenario (2026 market rates)
+export const defaultParams: SimulationParams = {
+  homePrice: 833000,              // 2BR condo Cambridge (for $750k loan @ 10% down)
+  downPaymentPercent: 10,
+  mortgageRate: 0.0675,           // Current 30yr fixed (March 2026)
+  propertyTaxRate: 0.011,         // Cambridge rate
+  insuranceAnnual: 1440,          // ~$120/mo
+  maintenancePercent: 0.01,
+  
+  // Additional costs
+  closingCostPercent: 3,          // 3% closing costs
+  hoaMonthly: 500,                // 2BR condo fee estimate
+  majorRepairReserve: 2000,       // $2k/yr reserve for big stuff
+  
+  // Multi-family units (empty = single-family mode)
+  units: [],
+  
+  houseHack: true,
+  rentalIncome: 1800,             // Cambridge room rental rate
+  rentalIncomeGrowth: 0.03,       // Match rent growth
+  vacancyRate: 0.05,              // 5% vacancy (~18 days/year turnover)
+  
+  w2Income: 108000,               // Ayaan's W2
+  federalBracket: 0.22,           // 22% bracket at $108k
+  stateRate: 0.05,                // MA flat rate
+  filingStatus: 'single',         // Single or married (affects std deduction & cap gains)
+  buildingValuePercent: 0.80,     // 80% building, 20% land (Cambridge might be 60/40)
+  
+  currentRent: 1800,              // Ayaan's realistic max rent (not $3,200 market rate)
+  rentGrowth: 0.03,
+  
+  // Historical distributions
+  appreciationMean: 0.05,      // Cambridge long-term ~5%
+  appreciationStdDev: 0.12,    // Housing is volatile (2008 was -15%, some years +15%)
+  stockReturnMean: 0.10,       // S&P 500 historical
+  stockReturnStdDev: 0.17,     // S&P 500 volatility
+  marketCorrelation: 0.3,      // Housing-stock correlation (~0.3 historically)
+  
+  // Cost growth
+  propertyTaxGrowth: 0.02,     // 2%/yr property tax increases
+  insuranceGrowth: 0.05,       // 5%/yr insurance increases (has been brutal lately)
+  
+  // Exit costs
+  sellingCostPercent: 6,       // 5-6% realtor + closing
+  capitalGainsTaxRate: 0.15,   // 15% LTCG (above $250k exemption for primary)
+  
+  // First-time homebuyer benefits (disabled by default)
+  firstTimeHomeBuyer: {
+    enabled: false,
+    noPMI: false,                // ONE Mortgage / MassHousing
+    downPaymentAssistance: 0,    // DPA grant amount
+    lowerRate: false,
+    rateDiscount: 0.005,         // 0.5% rate discount
+    taxCredit: 0,                // Annual MCC credit
+  },
+  
+  years: 15,
+  numSimulations: 5000,
+  
+  // HELOC strategy (disabled by default)
+  heloc: {
+    enabled: false,
+    minEquityPercent: 0.30,  // Need 30% equity before taking HELOC
+    maxLTV: 0.80,            // Combined LTV cap
+    rate: 0.085,             // HELOC rate ~8.5%
+    deployToStocks: true,
+  },
+  
+  scenarios: {},
+}
+
+// ============================================
+// SENSITIVITY ANALYSIS
+// ============================================
+
+export interface SensitivityResult {
+  parameter: string
+  label: string
+  baseValue: number
+  lowValue: number
+  highValue: number
+  lowWinRate: number
+  baseWinRate: number
+  highWinRate: number
+  lowP50Delta: number
+  baseP50Delta: number
+  highP50Delta: number
+  impact: number  // Spread between low and high outcomes (for ranking)
+}
+
+// Parameters to test in sensitivity analysis
+const SENSITIVITY_PARAMS: Array<{
+  key: keyof SimulationParams
+  label: string
+  lowMult?: number
+  highMult?: number
+  lowAdd?: number
+  highAdd?: number
+}> = [
+  { key: 'homePrice', label: 'Home Price', lowMult: 0.9, highMult: 1.1 },
+  { key: 'downPaymentPercent', label: 'Down Payment %', lowAdd: -5, highAdd: 10 },
+  { key: 'mortgageRate', label: 'Mortgage Rate', lowAdd: -0.01, highAdd: 0.01 },
+  { key: 'appreciationMean', label: 'Appreciation (μ)', lowAdd: -0.02, highAdd: 0.02 },
+  { key: 'stockReturnMean', label: 'Stock Return (μ)', lowAdd: -0.02, highAdd: 0.02 },
+  { key: 'rentalIncome', label: 'Rental Income', lowMult: 0.8, highMult: 1.2 },
+  { key: 'currentRent', label: 'Current Rent', lowMult: 0.85, highMult: 1.15 },
+  { key: 'hoaMonthly', label: 'HOA/Month', lowMult: 0.5, highMult: 1.5 },
+]
+
+export function runSensitivityAnalysis(
+  baseParams: SimulationParams,
+  quickMode: boolean = true  // Fewer simulations for speed
+): SensitivityResult[] {
+  const numSims = quickMode ? 1000 : baseParams.numSimulations
+  const testParams = { ...baseParams, numSimulations: numSims }
+  
+  // Run base case
+  const baseResult = runSimulation(testParams)
+  const baseWinRate = baseResult.finalStats.buyWinsProbability
+  const baseP50 = baseResult.finalStats.delta.p50
+  
+  const results: SensitivityResult[] = []
+  
+  for (const param of SENSITIVITY_PARAMS) {
+    const baseValue = testParams[param.key] as number
+    if (typeof baseValue !== 'number') continue
+    
+    // Skip rental income if not house hacking
+    if (param.key === 'rentalIncome' && !testParams.houseHack && testParams.units.length === 0) continue
+    
+    // Calculate low and high values
+    let lowValue: number, highValue: number
+    if (param.lowMult !== undefined) {
+      lowValue = baseValue * param.lowMult
+      highValue = baseValue * (param.highMult || 1)
+    } else {
+      lowValue = baseValue + (param.lowAdd || 0)
+      highValue = baseValue + (param.highAdd || 0)
+    }
+    
+    // Clamp values
+    if (param.key === 'downPaymentPercent') {
+      lowValue = Math.max(3, lowValue)
+      highValue = Math.min(50, highValue)
+    }
+    
+    // Run low scenario
+    const lowParams = { ...testParams, [param.key]: lowValue }
+    const lowResult = runSimulation(lowParams)
+    
+    // Run high scenario
+    const highParams = { ...testParams, [param.key]: highValue }
+    const highResult = runSimulation(highParams)
+    
+    results.push({
+      parameter: param.key,
+      label: param.label,
+      baseValue,
+      lowValue,
+      highValue,
+      lowWinRate: lowResult.finalStats.buyWinsProbability,
+      baseWinRate,
+      highWinRate: highResult.finalStats.buyWinsProbability,
+      lowP50Delta: lowResult.finalStats.delta.p50,
+      baseP50Delta: baseP50,
+      highP50Delta: highResult.finalStats.delta.p50,
+      impact: Math.abs(highResult.finalStats.delta.p50 - lowResult.finalStats.delta.p50),
+    })
+  }
+  
+  // Sort by impact (biggest swings first)
+  return results.sort((a, b) => b.impact - a.impact)
+}
+
+// ============================================
+// BREAK-EVEN SURFACE (2D HEATMAP)
+// ============================================
+
+export interface HeatmapCell {
+  x: number  // First variable value
+  y: number  // Second variable value
+  winRate: number
+  p50Delta: number
+}
+
+export interface BreakEvenSurface {
+  xLabel: string
+  yLabel: string
+  xValues: number[]
+  yValues: number[]
+  cells: HeatmapCell[][]  // [xIndex][yIndex]
+  breakEvenLine?: Array<{ x: number; y: number }>  // Points where winRate ≈ 50%
+}
+
+export function runBreakEvenSurface(
+  baseParams: SimulationParams,
+  xParam: 'homePrice' | 'downPaymentPercent' | 'mortgageRate' = 'homePrice',
+  yParam: 'downPaymentPercent' | 'mortgageRate' | 'rentalIncome' = 'downPaymentPercent',
+  resolution: number = 7  // Grid points per axis
+): BreakEvenSurface {
+  const numSims = 500  // Fast mode for grid
+  const testParams = { ...baseParams, numSimulations: numSims }
+  
+  // Define ranges
+  const ranges: Record<string, { min: number; max: number; label: string }> = {
+    homePrice: { 
+      min: baseParams.homePrice * 0.8, 
+      max: baseParams.homePrice * 1.2,
+      label: 'Home Price'
+    },
+    downPaymentPercent: { 
+      min: 5, 
+      max: 25,
+      label: 'Down Payment %'
+    },
+    mortgageRate: { 
+      min: 0.05, 
+      max: 0.08,
+      label: 'Mortgage Rate'
+    },
+    rentalIncome: { 
+      min: baseParams.rentalIncome * 0.5, 
+      max: baseParams.rentalIncome * 1.5,
+      label: 'Rental Income'
+    },
+  }
+  
+  const xRange = ranges[xParam]
+  const yRange = ranges[yParam]
+  
+  // Generate grid values
+  const xValues: number[] = []
+  const yValues: number[] = []
+  for (let i = 0; i < resolution; i++) {
+    xValues.push(xRange.min + (xRange.max - xRange.min) * (i / (resolution - 1)))
+    yValues.push(yRange.min + (yRange.max - yRange.min) * (i / (resolution - 1)))
+  }
+  
+  // Run simulations for each cell
+  const cells: HeatmapCell[][] = []
+  const breakEvenPoints: Array<{ x: number; y: number }> = []
+  
+  for (let xi = 0; xi < xValues.length; xi++) {
+    cells[xi] = []
+    for (let yi = 0; yi < yValues.length; yi++) {
+      const cellParams = {
+        ...testParams,
+        [xParam]: xValues[xi],
+        [yParam]: yValues[yi],
+      }
+      
+      const result = runSimulation(cellParams)
+      const cell: HeatmapCell = {
+        x: xValues[xi],
+        y: yValues[yi],
+        winRate: result.finalStats.buyWinsProbability,
+        p50Delta: result.finalStats.delta.p50,
+      }
+      cells[xi][yi] = cell
+      
+      // Track break-even points (winRate between 45-55%)
+      if (cell.winRate >= 0.45 && cell.winRate <= 0.55) {
+        breakEvenPoints.push({ x: cell.x, y: cell.y })
+      }
+    }
+  }
+  
+  return {
+    xLabel: xRange.label,
+    yLabel: yRange.label,
+    xValues,
+    yValues,
+    cells,
+    breakEvenLine: breakEvenPoints,
+  }
+}
