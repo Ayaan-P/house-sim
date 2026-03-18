@@ -1,14 +1,18 @@
+'use client'
+
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { AuthButton } from '@/components/AuthProvider'
 
 interface HeaderProps {
   title: string
   backLink?: { href: string; label: string }
   children?: React.ReactNode
   className?: string
+  showAuth?: boolean
 }
 
-export function Header({ title, backLink, children, className }: HeaderProps) {
+export function Header({ title, backLink, children, className, showAuth = true }: HeaderProps) {
   return (
     <header
       className={cn(
@@ -24,8 +28,9 @@ export function Header({ title, backLink, children, className }: HeaderProps) {
         )}
         <h1 className="text-lg sm:text-xl font-semibold text-white">{title}</h1>
       </div>
-      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex items-center gap-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         {children}
+        {showAuth && <AuthButton />}
       </div>
     </header>
   )
