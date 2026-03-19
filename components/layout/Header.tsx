@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { AuthButton } from '@/components/AuthProvider'
+import { UpgradeButton } from '@/components/UpgradeButton'
 
 interface HeaderProps {
   title: string
@@ -30,7 +31,12 @@ export function Header({ title, backLink, children, className, showAuth = true }
       </div>
       <div className="flex items-center gap-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         {children}
-        {showAuth && <AuthButton />}
+        {showAuth && (
+          <>
+            <UpgradeButton />
+            <AuthButton />
+          </>
+        )}
       </div>
     </header>
   )
