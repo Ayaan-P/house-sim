@@ -190,6 +190,19 @@ export interface SimulationParams {
       // If enabled, capital gains and depreciation recapture are deferred (not taxed at sale)
     }
   }
+  
+  // Exit strategy - how wealth is calculated at end of simulation
+  exitStrategy: 'sell' | 'hold' | '1031' | 'remote'
+  // sell: Sell property, pay all taxes (default, most conservative)
+  // hold: Never sell, paper equity only (no selling costs, no taxes)
+  // 1031: Exchange into like-kind property, defer all taxes
+  // remote: Move away, property becomes 100% rental, property manager fees
+  
+  // Remote landlord settings (only used if exitStrategy = 'remote')
+  remoteLandlord: {
+    propertyManagerPercent: number  // PM fee as % of rent (typically 8-10%)
+    moveOutYear: number             // Year you move out and go full rental
+  }
 }
 
 export interface YearResult {
@@ -868,31 +881,49 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
   const finalHelocBalance = lastYear?.helocBalance || 0
   const finalStocksFromHeloc = lastYear?.stocksFromHeloc || 0
   
-  // Selling costs (6% of home value)
-  const sellingCosts = finalHomeValue * (params.sellingCostPercent / 100)
-  
-  // Capital gains (appreciation above purchase price, minus exemption)
-  // $250k for single, $500k for married filing jointly
-  // 1031 Exchange: if enabled, defer capital gains and depreciation recapture
+  // Exit strategy determines how we calculate final wealth
+  const exitStrategy = params.exitStrategy || 'sell'
   const taxStrategies = params.taxStrategies || { costSegregation: { enabled: false, shortLifePercent: 0.20, year1BonusDepreciation: 1.0 }, qbi: { enabled: false, qualifiesAsBusiness: false }, exchange1031: { enabled: false } }
-  const is1031Exchange = taxStrategies.exchange1031?.enabled || false
   
+  let sellingCosts = 0
   let capitalGainsTax = 0
   let depreciationRecapture = 0
+  let saleProceeds = 0
   
-  if (!is1031Exchange) {
+  if (exitStrategy === 'hold') {
+    // Hold Forever: Paper equity only, no selling costs, no taxes
+    // This is the "buy, borrow, die" strategy
+    sellingCosts = 0
+    capitalGainsTax = 0
+    depreciationRecapture = 0
+    saleProceeds = finalHomeValue - finalLoanBalance - finalHelocBalance
+  } else if (exitStrategy === '1031' || taxStrategies.exchange1031?.enabled) {
+    // 1031 Exchange: Selling costs apply, but all taxes deferred
+    sellingCosts = finalHomeValue * (params.sellingCostPercent / 100)
+    capitalGainsTax = 0
+    depreciationRecapture = 0
+    saleProceeds = finalHomeValue - finalLoanBalance - finalHelocBalance - sellingCosts
+  } else if (exitStrategy === 'remote') {
+    // Remote Landlord: Sell at end, but property was 100% rental after move-out
+    // More depreciation taken = more recapture
+    sellingCosts = finalHomeValue * (params.sellingCostPercent / 100)
+    const capGainsExemption = 0  // No primary residence exemption if not living there 2 of last 5 years
+    const totalGain = finalHomeValue - homePrice
+    const taxableGain = Math.max(0, totalGain - capGainsExemption)
+    capitalGainsTax = taxableGain * (params.capitalGainsTaxRate || 0.15)
+    depreciationRecapture = cumulativeDepreciation * 0.25
+    saleProceeds = finalHomeValue - finalLoanBalance - finalHelocBalance - sellingCosts - capitalGainsTax - depreciationRecapture
+  } else {
+    // Sell (default): Full selling costs and taxes, with primary residence exemption
+    sellingCosts = finalHomeValue * (params.sellingCostPercent / 100)
     const capGainsExemption = params.filingStatus === 'married' ? 500000 : 250000
     const totalGain = finalHomeValue - homePrice
     const taxableGain = Math.max(0, totalGain - capGainsExemption)
     capitalGainsTax = taxableGain * (params.capitalGainsTaxRate || 0.15)
-    
-    // Depreciation recapture (25% rate on depreciation taken)
     depreciationRecapture = cumulativeDepreciation * 0.25
+    saleProceeds = finalHomeValue - finalLoanBalance - finalHelocBalance - sellingCosts - capitalGainsTax - depreciationRecapture
   }
-  // If 1031 exchange, both are $0 (deferred)
   
-  // Net proceeds from sale (includes depreciation recapture)
-  const saleProceeds = finalHomeValue - finalLoanBalance - finalHelocBalance - sellingCosts - capitalGainsTax - depreciationRecapture
   const finalBuyerStockPortfolio = lastYear?.buyerStockPortfolio || 0
   const finalWealthBuyNet = saleProceeds + finalStocksFromHeloc + finalBuyerStockPortfolio
   
@@ -997,6 +1028,15 @@ export const defaultParams: SimulationParams = {
     exchange1031: {
       enabled: false,                // Defer cap gains by reinvesting
     },
+  },
+  
+  // Exit strategy
+  exitStrategy: 'sell',  // 'sell' | 'hold' | '1031' | 'remote'
+  
+  // Remote landlord settings
+  remoteLandlord: {
+    propertyManagerPercent: 0.10,  // 10% PM fee
+    moveOutYear: 5,                // Move out after year 5
   },
 }
 

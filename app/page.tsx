@@ -1444,9 +1444,41 @@ function HousePageInner() {
               </div>
             </div>
             
+            {/* Exit Strategy */}
+            <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+              <div className="text-white/50 text-sm mb-3">Exit Strategy</div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'sell', label: 'Sell', color: 'red', desc: 'Pay all taxes' },
+                  { value: 'hold', label: 'Hold Forever', color: 'green', desc: 'Paper equity, no taxes' },
+                  { value: '1031', label: '1031 Exchange', color: 'cyan', desc: 'Defer taxes, upgrade' },
+                  { value: 'remote', label: 'Remote Landlord', color: 'amber', desc: '100% rental, hire PM' },
+                ].map(({ value, label, color, desc }) => (
+                  <button
+                    key={value}
+                    onClick={() => update('exitStrategy', value as 'sell' | 'hold' | '1031' | 'remote')}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
+                      inputs.exitStrategy === value
+                        ? `bg-${color}-500/30 border-${color}-500 text-${color}-300`
+                        : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'
+                    } border`}
+                    title={desc}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="text-white/40 text-xs mt-2">
+                {inputs.exitStrategy === 'sell' && '→ Sell at year N, pay 6% costs + capital gains + depreciation recapture'}
+                {inputs.exitStrategy === 'hold' && '→ Never sell, paper equity only (buy-borrow-die strategy)'}
+                {inputs.exitStrategy === '1031' && '→ Exchange into bigger property, defer all taxes indefinitely'}
+                {inputs.exitStrategy === 'remote' && '→ Move away, hire property manager (10% of rent), lose primary residence exemption'}
+              </div>
+            </div>
+            
             {/* Scenarios */}
             <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
-              <div className="text-white/50 text-sm mb-3">Scenarios</div>
+              <div className="text-white/50 text-sm mb-3">Risk Scenarios</div>
               <div className="flex flex-wrap gap-3">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="checkbox" checked={!!inputs.scenarios.jobLoss}
