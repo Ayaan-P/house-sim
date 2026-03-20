@@ -244,33 +244,73 @@ ${hasRental ? `### Rental (Schedule E)
     URL.revokeObjectURL(url)
   }
   
-  // Share function - generates URL with all parameters
+  // Share function - generates URL with ALL parameters (only non-default values)
   const [copied, setCopied] = useState(false)
   const shareUrl = () => {
     const params = new URLSearchParams()
+    const d = defaultParams  // Compare against defaults
     
-    // Core params
+    // Helper to add param only if different from default
+    const add = (key: string, val: number | string, def?: number | string) => {
+      if (def === undefined || val !== def) params.set(key, val.toString())
+    }
+    const addPct = (key: string, val: number, def?: number) => {
+      if (def === undefined || val !== def) params.set(key, (val * 100).toString())
+    }
+    
+    // House (always include core params)
     params.set('price', inputs.homePrice.toString())
     params.set('down', inputs.downPaymentPercent.toString())
-    params.set('rate', (inputs.mortgageRate * 100).toString())
-    params.set('rent', inputs.currentRent.toString())
-    params.set('years', inputs.years.toString())
+    addPct('rate', inputs.mortgageRate, d.mortgageRate)
+    addPct('tax', inputs.propertyTaxRate, d.propertyTaxRate)
+    add('insurance', inputs.insuranceAnnual, d.insuranceAnnual)
     
-    // Optional params (only include if different from defaults)
-    if (inputs.hoaMonthly > 0) params.set('hoa', inputs.hoaMonthly.toString())
-    if (inputs.propertyTaxRate !== 0.011) params.set('tax', (inputs.propertyTaxRate * 100).toString())
-    if (inputs.maintenanceAnnual !== 3000) params.set('maint', inputs.maintenanceAnnual.toString())
-    if (inputs.w2Income !== 108000) params.set('income', inputs.w2Income.toString())
-    if (inputs.appreciationMean !== 0.05) params.set('appr', (inputs.appreciationMean * 100).toString())
-    if (inputs.stockReturnMean !== 0.10) params.set('stock', (inputs.stockReturnMean * 100).toString())
+    // Additional costs
+    add('closing', inputs.closingCostPercent, d.closingCostPercent)
+    add('hoa', inputs.hoaMonthly, d.hoaMonthly)
+    add('maint', inputs.maintenanceAnnual, d.maintenanceAnnual)
+    
+    // House hack / rental
+    if (inputs.houseHack) params.set('househack', '1')
+    if (inputs.rentalIncome > 0) add('rental', inputs.rentalIncome, 0)
+    addPct('rentalgrowth', inputs.rentalIncomeGrowth, d.rentalIncomeGrowth)
+    addPct('vacancy', inputs.vacancyRate, d.vacancyRate)
+    
+    // Tax
+    add('income', inputs.w2Income, d.w2Income)
+    addPct('fedbracket', inputs.federalBracket, d.federalBracket)
+    addPct('staterate', inputs.stateRate, d.stateRate)
+    if (inputs.filingStatus !== d.filingStatus) params.set('filing', inputs.filingStatus)
+    addPct('buildingpct', inputs.buildingValuePercent, d.buildingValuePercent)
+    
+    // Alternative (rent)
+    params.set('rent', inputs.currentRent.toString())
+    addPct('rentgrowth', inputs.rentGrowth, d.rentGrowth)
+    
+    // Distributions
+    addPct('appr', inputs.appreciationMean, d.appreciationMean)
+    addPct('apprstd', inputs.appreciationStdDev, d.appreciationStdDev)
+    addPct('stock', inputs.stockReturnMean, d.stockReturnMean)
+    addPct('stockstd', inputs.stockReturnStdDev, d.stockReturnStdDev)
+    addPct('corr', inputs.marketCorrelation, d.marketCorrelation)
+    
+    // Cost growth
+    addPct('taxgrowth', inputs.propertyTaxGrowth, d.propertyTaxGrowth)
+    addPct('insgrowth', inputs.insuranceGrowth, d.insuranceGrowth)
+    
+    // Exit costs
+    add('sellcost', inputs.sellingCostPercent, d.sellingCostPercent)
+    addPct('capgains', inputs.capitalGainsTaxRate, d.capitalGainsTaxRate)
+    
+    // Simulation
+    params.set('years', inputs.years.toString())
+    add('sims', inputs.numSimulations, d.numSimulations)
     
     // Multi-family
     if (inputs.units.length > 0) {
       params.set('type', `${inputs.units.length}-family`)
       const totalRent = inputs.units.filter(u => !u.ownerOccupied).reduce((sum, u) => sum + u.monthlyRent, 0)
       params.set('rental', totalRent.toString())
-    } else if (inputs.houseHack) {
-      params.set('rental', inputs.rentalIncome.toString())
     }
     
     // FTHB
@@ -279,11 +319,16 @@ ${hasRental ? `### Rental (Schedule E)
       if (inputs.firstTimeHomeBuyer.noPMI) params.set('nopmi', '1')
       if (inputs.firstTimeHomeBuyer.downPaymentAssistance > 0) params.set('dpa', inputs.firstTimeHomeBuyer.downPaymentAssistance.toString())
       if (inputs.firstTimeHomeBuyer.rateDiscount > 0) params.set('discount', (inputs.firstTimeHomeBuyer.rateDiscount * 100).toString())
+      if (inputs.firstTimeHomeBuyer.taxCredit > 0) params.set('taxcredit', inputs.firstTimeHomeBuyer.taxCredit.toString())
     }
     
     // HELOC
     if (inputs.heloc?.enabled) {
       params.set('heloc', '1')
+      if (inputs.heloc.minEquityPercent !== 0.30) params.set('helocmin', (inputs.heloc.minEquityPercent * 100).toString())
+      if (inputs.heloc.maxLTV !== 0.80) params.set('helocltv', (inputs.heloc.maxLTV * 100).toString())
+      if (inputs.heloc.rate !== 0.08) params.set('helocrate', (inputs.heloc.rate * 100).toString())
+      if (!inputs.heloc.deployToStocks) params.set('helocnostocks', '1')
     }
     
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
@@ -691,98 +736,116 @@ function HousePageInner() {
   const [isRunningSensitivity, setIsRunningSensitivity] = useState(false)
   const [isRunningBreakEven, setIsRunningBreakEven] = useState(false)
   
-  // Parse URL params to pre-populate from listings
+  // Parse URL params - comprehensive list of all SimulationParams fields
   useEffect(() => {
-    const price = searchParams.get('price')
-    const rental = searchParams.get('rental')
-    const hoa = searchParams.get('hoa')
-    const type = searchParams.get('type') // "2-family", "3-family", etc.
-    const down = searchParams.get('down')
-    const years = searchParams.get('years')
-    const rate = searchParams.get('rate')
-    const rent = searchParams.get('rent') // current rent (what you pay)
-    const income = searchParams.get('income')
-    const tax = searchParams.get('tax')
-    const maint = searchParams.get('maint')
-    const appr = searchParams.get('appr')
-    const stock = searchParams.get('stock')
+    const p = (key: string) => searchParams.get(key)
+    const pNum = (key: string) => p(key) ? parseFloat(p(key)!) : null
+    const pInt = (key: string) => p(key) ? parseInt(p(key)!, 10) : null
+    const pBool = (key: string) => p(key) === '1' || p(key) === 'true'
+    const pPct = (key: string) => pNum(key) !== null ? pNum(key)! / 100 : null  // Convert percentage to decimal
     
-    // FTHB params
-    const fthb = searchParams.get('fthb') // "1" or "true" to enable
-    const nopmi = searchParams.get('nopmi') // "1" or "true"
-    const dpa = searchParams.get('dpa') // down payment assistance amount
-    const rateDiscount = searchParams.get('discount') // rate discount (e.g., 0.5 for 0.5%)
+    // Check if any params exist
+    if (!searchParams.toString()) return
     
-    // HELOC params
-    const heloc = searchParams.get('heloc') // "1" or "true" to enable
-    
-    if (price || rental || hoa || type || down || years || rate || rent || fthb || heloc) {
-      setInputs(prev => {
-        const updates: Partial<SimulationParams> = {}
+    setInputs(prev => {
+      const updates: Partial<SimulationParams> = {}
+      
+      // House
+      if (pNum('price') !== null) updates.homePrice = pNum('price')!
+      if (pNum('down') !== null) updates.downPaymentPercent = pNum('down')!
+      if (pPct('rate') !== null) updates.mortgageRate = pPct('rate')!
+      if (pPct('tax') !== null) updates.propertyTaxRate = pPct('tax')!
+      if (pNum('insurance') !== null) updates.insuranceAnnual = pNum('insurance')!
+      
+      // Additional costs
+      if (pPct('closing') !== null) updates.closingCostPercent = pNum('closing')!
+      if (pNum('hoa') !== null) updates.hoaMonthly = pNum('hoa')!
+      if (pNum('maint') !== null) updates.maintenanceAnnual = pNum('maint')!
+      
+      // House hack / rental
+      if (pBool('househack')) updates.houseHack = true
+      if (pNum('rental') !== null) updates.rentalIncome = pNum('rental')!
+      if (pPct('rentalgrowth') !== null) updates.rentalIncomeGrowth = pPct('rentalgrowth')!
+      if (pPct('vacancy') !== null) updates.vacancyRate = pPct('vacancy')!
+      
+      // Tax
+      if (pNum('income') !== null) updates.w2Income = pNum('income')!
+      if (pPct('fedbracket') !== null) updates.federalBracket = pPct('fedbracket')!
+      if (pPct('staterate') !== null) updates.stateRate = pPct('staterate')!
+      if (p('filing') === 'married') updates.filingStatus = 'married'
+      if (pPct('buildingpct') !== null) updates.buildingValuePercent = pPct('buildingpct')!
+      
+      // Alternative (rent)
+      if (pNum('rent') !== null) updates.currentRent = pNum('rent')!
+      if (pPct('rentgrowth') !== null) updates.rentGrowth = pPct('rentgrowth')!
+      
+      // Distributions
+      if (pPct('appr') !== null) updates.appreciationMean = pPct('appr')!
+      if (pPct('apprstd') !== null) updates.appreciationStdDev = pPct('apprstd')!
+      if (pPct('stock') !== null) updates.stockReturnMean = pPct('stock')!
+      if (pPct('stockstd') !== null) updates.stockReturnStdDev = pPct('stockstd')!
+      if (pPct('corr') !== null) updates.marketCorrelation = pPct('corr')!
+      
+      // Cost growth
+      if (pPct('taxgrowth') !== null) updates.propertyTaxGrowth = pPct('taxgrowth')!
+      if (pPct('insgrowth') !== null) updates.insuranceGrowth = pPct('insgrowth')!
+      
+      // Exit costs
+      if (pPct('sellcost') !== null) updates.sellingCostPercent = pNum('sellcost')!
+      if (pPct('capgains') !== null) updates.capitalGainsTaxRate = pPct('capgains')!
+      
+      // Simulation
+      if (pInt('years') !== null) updates.years = pInt('years')!
+      if (pInt('sims') !== null) updates.numSimulations = pInt('sims')!
+      
+      // FTHB
+      if (pBool('fthb')) {
+        updates.firstTimeHomeBuyer = {
+          enabled: true,
+          noPMI: pBool('nopmi'),
+          downPaymentAssistance: pNum('dpa') || 0,
+          lowerRate: pPct('discount') !== null,
+          rateDiscount: pPct('discount') || 0,
+          taxCredit: pNum('taxcredit') || 0,
+        }
+      }
+      
+      // HELOC
+      if (pBool('heloc')) {
+        updates.heloc = {
+          enabled: true,
+          minEquityPercent: pPct('helocmin') || 0.30,
+          maxLTV: pPct('helocltv') || 0.80,
+          rate: pPct('helocrate') || 0.08,
+          deployToStocks: !pBool('helocnostocks'),
+        }
+      }
+      
+      // Multi-family setup
+      const type = p('type')
+      if (type && (type.includes('family') || type.includes('Family'))) {
+        const familyType = type.toLowerCase().includes('3') ? '3-family' 
+          : type.toLowerCase().includes('4') ? '4-family' 
+          : '2-family'
         
-        if (price) updates.homePrice = parseFloat(price)
-        if (hoa) updates.hoaMonthly = parseFloat(hoa)
-        if (down) updates.downPaymentPercent = parseFloat(down)
-        if (years) updates.years = parseInt(years, 10)
-        if (rate) updates.mortgageRate = parseFloat(rate) / 100 // URL param is percentage (e.g., 6.75)
-        if (rent) updates.currentRent = parseFloat(rent)
-        if (income) updates.w2Income = parseFloat(income)
-        if (tax) updates.propertyTaxRate = parseFloat(tax) / 100
-        if (maint) updates.maintenanceAnnual = parseFloat(maint)
-        if (appr) updates.appreciationMean = parseFloat(appr) / 100
-        if (stock) updates.stockReturnMean = parseFloat(stock) / 100
+        const units = createMultiFamilyUnits(familyType)
         
-        // FTHB setup
-        if (fthb === '1' || fthb === 'true') {
-          updates.firstTimeHomeBuyer = {
-            enabled: true,
-            noPMI: nopmi === '1' || nopmi === 'true',
-            downPaymentAssistance: dpa ? parseFloat(dpa) : 0,
-            lowerRate: rateDiscount ? true : false,
-            rateDiscount: rateDiscount ? parseFloat(rateDiscount) / 100 : 0,
-            taxCredit: 0,
-          }
+        const rental = pNum('rental')
+        if (rental !== null) {
+          const rentalUnits = units.filter(u => !u.ownerOccupied)
+          const perUnit = rental / rentalUnits.length
+          rentalUnits.forEach(u => { u.monthlyRent = Math.round(perUnit) })
         }
         
-        // HELOC setup
-        if (heloc === '1' || heloc === 'true') {
-          updates.heloc = {
-            enabled: true,
-            minEquityPercent: 0.30,
-            maxLTV: 0.80,
-            rate: 0.08,
-            deployToStocks: true,
-          }
-        }
-        
-        // Multi-family setup
-        if (type && (type.includes('family') || type.includes('Family'))) {
-          const familyType = type.toLowerCase().includes('3') ? '3-family' 
-            : type.toLowerCase().includes('4') ? '4-family' 
-            : '2-family'
-          
-          // Create default units for this type
-          const units = createMultiFamilyUnits(familyType)
-          
-          // If we have total rental income, distribute it
-          if (rental) {
-            const totalRent = parseFloat(rental)
-            const rentalUnits = units.filter(u => !u.ownerOccupied)
-            const perUnit = totalRent / rentalUnits.length
-            rentalUnits.forEach(u => { u.monthlyRent = Math.round(perUnit) })
-          }
-          
-          updates.units = units
-          updates.houseHack = true
-        } else if (rental) {
-          // Single family with room rental
-          updates.rentalIncome = parseFloat(rental)
-          updates.houseHack = true
-        }
-        
-        return { ...prev, ...updates }
-      })
-    }
+        updates.units = units
+        updates.houseHack = true
+      } else if (pNum('rental') !== null) {
+        updates.rentalIncome = pNum('rental')!
+        updates.houseHack = true
+      }
+      
+      return { ...prev, ...updates }
+    })
   }, [searchParams])
   
   const update = useCallback((key: keyof SimulationParams, value: number | boolean | object | string) => {
