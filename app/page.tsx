@@ -852,8 +852,10 @@ function HousePageInner() {
         
         // Multi-family defaults (unless explicitly set in URL)
         if (pNum('hoa') === null) updates.hoaMonthly = 0
-        if (pNum('insurance') === null) updates.insuranceAnnual = 3000  // Higher for multi-family
-        if (pNum('maint') === null) updates.maintenanceAnnual = 6000   // More units = more maintenance
+        // Scale insurance/maintenance by price (roughly 0.5% of value for insurance, 1% for maintenance)
+        const basePrice = pNum('price') || 1000000
+        if (pNum('insurance') === null) updates.insuranceAnnual = Math.round(basePrice * 0.005)  // ~$6k for $1.2M
+        if (pNum('maint') === null) updates.maintenanceAnnual = Math.round(basePrice * 0.01)     // ~$12k for $1.2M
       } else if (pNum('rental') !== null) {
         updates.rentalIncome = pNum('rental')!
         updates.houseHack = true
