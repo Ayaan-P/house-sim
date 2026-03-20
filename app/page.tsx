@@ -850,8 +850,10 @@ function HousePageInner() {
         updates.units = units
         updates.houseHack = true
         
-        // Multi-family defaults: no HOA unless explicitly set
+        // Multi-family defaults (unless explicitly set in URL)
         if (pNum('hoa') === null) updates.hoaMonthly = 0
+        if (pNum('insurance') === null) updates.insuranceAnnual = 3000  // Higher for multi-family
+        if (pNum('maint') === null) updates.maintenanceAnnual = 6000   // More units = more maintenance
       } else if (pNum('rental') !== null) {
         updates.rentalIncome = pNum('rental')!
         updates.houseHack = true
