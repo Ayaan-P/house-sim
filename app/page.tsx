@@ -244,6 +244,40 @@ ${hasRental ? `### Rental (Schedule E)
     URL.revokeObjectURL(url)
   }
   
+  // Share function - generates URL with all parameters
+  const [copied, setCopied] = useState(false)
+  const shareUrl = () => {
+    const params = new URLSearchParams()
+    
+    // Core params
+    params.set('price', inputs.homePrice.toString())
+    params.set('down', inputs.downPaymentPercent.toString())
+    params.set('rate', (inputs.mortgageRate * 100).toString())
+    params.set('rent', inputs.currentRent.toString())
+    params.set('years', inputs.years.toString())
+    
+    // Optional params (only include if different from defaults)
+    if (inputs.hoaMonthly > 0) params.set('hoa', inputs.hoaMonthly.toString())
+    if (inputs.houseHack) params.set('rental', inputs.rentalIncome.toString())
+    if (inputs.propertyTaxRate !== 0.011) params.set('tax', (inputs.propertyTaxRate * 100).toString())
+    if (inputs.maintenanceAnnual !== 3000) params.set('maint', inputs.maintenanceAnnual.toString())
+    if (inputs.w2Income !== 108000) params.set('income', inputs.w2Income.toString())
+    if (inputs.appreciationMean !== 0.05) params.set('appr', (inputs.appreciationMean * 100).toString())
+    if (inputs.stockReturnMean !== 0.10) params.set('stock', (inputs.stockReturnMean * 100).toString())
+    
+    // Multi-family
+    if (inputs.units.length > 0) {
+      params.set('type', `${inputs.units.length}-family`)
+      const totalRent = inputs.units.filter(u => !u.ownerOccupied).reduce((sum, u) => sum + u.monthlyRent, 0)
+      params.set('rental', totalRent.toString())
+    }
+    
+    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
+    navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  
   return (
     <Section title="🧮 How The Math Works">
       <div className="flex gap-2">
@@ -255,6 +289,14 @@ ${hasRental ? `### Rental (Schedule E)
             {isExpanded ? 'Click to collapse' : 'Click to see step-by-step calculations with your numbers'}
           </span>
           <span className={`transform transition-transform text-white/50 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+        </button>
+        <button
+          onClick={shareUrl}
+          className={`px-4 py-2 ${copied ? 'bg-green-600' : 'bg-purple-600 hover:bg-purple-700'} text-white rounded-xl border ${copied ? 'border-green-500' : 'border-purple-500'} transition-colors flex items-center gap-2`}
+          title="Copy shareable link"
+        >
+          <span>{copied ? '✓' : '🔗'}</span>
+          <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
         </button>
         <button
           onClick={exportMath}
