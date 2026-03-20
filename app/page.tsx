@@ -995,6 +995,7 @@ function HousePageInner() {
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">$</span>
               <input
                 type="text"
+                key={inputs.homePrice}
                 defaultValue={inputs.homePrice}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value.replace(/,/g, ''))
@@ -1011,6 +1012,7 @@ function HousePageInner() {
             <div className="relative">
               <input
                 type="text"
+                key={inputs.downPaymentPercent}
                 defaultValue={inputs.downPaymentPercent}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value)
@@ -1028,6 +1030,7 @@ function HousePageInner() {
             <div className="relative">
               <input
                 type="text"
+                key={inputs.mortgageRate}
                 defaultValue={(inputs.mortgageRate * 100).toFixed(2)}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value)
@@ -1046,6 +1049,7 @@ function HousePageInner() {
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">$</span>
               <input
                 type="text"
+                key={inputs.currentRent}
                 defaultValue={inputs.currentRent}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value.replace(/,/g, ''))
@@ -1062,6 +1066,7 @@ function HousePageInner() {
             <div className="relative">
               <input
                 type="text"
+                key={inputs.years}
                 defaultValue={inputs.years}
                 onBlur={(e) => {
                   const v = parseInt(e.target.value)
@@ -1127,6 +1132,7 @@ function HousePageInner() {
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
               <input
                 type="text"
+                key={inputs.rentalIncome}
                 defaultValue={inputs.rentalIncome}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value.replace(/,/g, ''))
@@ -1164,6 +1170,7 @@ function HousePageInner() {
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-white/40 text-xs">$</span>
                     <input
                       type="text"
+                      key={unit.monthlyRent}
                       defaultValue={unit.monthlyRent}
                       onClick={(e) => e.stopPropagation()}
                       onBlur={(e) => {
