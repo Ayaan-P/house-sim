@@ -680,7 +680,7 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     const ownerInterestDeduction = mortgageInterestDeduction * ownerPortionCalc
     const ownerSaltDeduction = saltDeduction * ownerPortionCalc
     const totalItemized = ownerInterestDeduction + ownerSaltDeduction
-    const standardDeduction = params.filingStatus === 'married' ? 31000 : 15500  // 2026 estimate
+    const standardDeduction = params.filingStatus === 'married' ? 32200 : 16100  // 2026 IRS values
     const itemizedBenefit = Math.max(0, totalItemized - standardDeduction)
     
     // Total tax savings: itemized benefit + rental deduction benefit

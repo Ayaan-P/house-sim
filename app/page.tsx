@@ -88,7 +88,7 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
   const rentalPortion = 1 - ownerPortion
   
   // Tax deductions - owner portion
-  const standardDeduction = inputs.filingStatus === 'married' ? 31000 : 15500
+  const standardDeduction = inputs.filingStatus === 'married' ? 32200 : 16100  // 2026 IRS values
   const ownerInterest = year1Interest * ownerPortion
   const ownerPropertyTax = annualPropertyTax * ownerPortion
   const stateIncomeTax = inputs.w2Income * inputs.stateRate
@@ -181,7 +181,7 @@ Formula: P = L × [r(1+r)^n] / [(1+r)^n - 1]
 ## Tax Deductions
 ### Owner-Occupied (Schedule A)
 - Owner Portion: ${(ownerPortion * 100).toFixed(0)}%
-- Mortgage Interest (Year 1): ${f(ownerInterest)}
+- Mortgage Interest (Year 1): ${f(mortgageInterestDeduction)}
 - SALT (capped at $40k): ${f(saltDeduction)}
 - Total Itemized: ${f(totalItemized)}
 - Standard Deduction: ${f(standardDeduction)}
