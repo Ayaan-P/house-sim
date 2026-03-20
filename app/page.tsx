@@ -68,7 +68,9 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
   const annualInsurance = inputs.insuranceAnnual
   const annualMaintenance = inputs.maintenanceAnnual || 0  // Flat annual cost, not % of home
   const annualHOA = inputs.hoaMonthly * 12
-  const annualPMI = (loanAmount / inputs.homePrice) > 0.8 ? loanAmount * 0.005 : 0
+  // PMI: required if LTV > 80%, unless FTHB noPMI benefit
+  const needsPMI = (loanAmount / inputs.homePrice) > 0.8 && !(inputs.firstTimeHomeBuyer?.enabled && inputs.firstTimeHomeBuyer?.noPMI)
+  const annualPMI = needsPMI ? loanAmount * 0.005 : 0
   
   // Year 1 interest - calculate actual amortization for first 12 payments
   let year1Interest = 0
