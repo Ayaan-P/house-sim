@@ -258,7 +258,6 @@ ${hasRental ? `### Rental (Schedule E)
     
     // Optional params (only include if different from defaults)
     if (inputs.hoaMonthly > 0) params.set('hoa', inputs.hoaMonthly.toString())
-    if (inputs.houseHack) params.set('rental', inputs.rentalIncome.toString())
     if (inputs.propertyTaxRate !== 0.011) params.set('tax', (inputs.propertyTaxRate * 100).toString())
     if (inputs.maintenanceAnnual !== 3000) params.set('maint', inputs.maintenanceAnnual.toString())
     if (inputs.w2Income !== 108000) params.set('income', inputs.w2Income.toString())
@@ -270,6 +269,21 @@ ${hasRental ? `### Rental (Schedule E)
       params.set('type', `${inputs.units.length}-family`)
       const totalRent = inputs.units.filter(u => !u.ownerOccupied).reduce((sum, u) => sum + u.monthlyRent, 0)
       params.set('rental', totalRent.toString())
+    } else if (inputs.houseHack) {
+      params.set('rental', inputs.rentalIncome.toString())
+    }
+    
+    // FTHB
+    if (inputs.firstTimeHomeBuyer?.enabled) {
+      params.set('fthb', '1')
+      if (inputs.firstTimeHomeBuyer.noPMI) params.set('nopmi', '1')
+      if (inputs.firstTimeHomeBuyer.downPaymentAssistance > 0) params.set('dpa', inputs.firstTimeHomeBuyer.downPaymentAssistance.toString())
+      if (inputs.firstTimeHomeBuyer.rateDiscount > 0) params.set('discount', (inputs.firstTimeHomeBuyer.rateDiscount * 100).toString())
+    }
+    
+    // HELOC
+    if (inputs.heloc?.enabled) {
+      params.set('heloc', '1')
     }
     
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
@@ -687,8 +701,22 @@ function HousePageInner() {
     const years = searchParams.get('years')
     const rate = searchParams.get('rate')
     const rent = searchParams.get('rent') // current rent (what you pay)
+    const income = searchParams.get('income')
+    const tax = searchParams.get('tax')
+    const maint = searchParams.get('maint')
+    const appr = searchParams.get('appr')
+    const stock = searchParams.get('stock')
     
-    if (price || rental || hoa || type || down || years || rate || rent) {
+    // FTHB params
+    const fthb = searchParams.get('fthb') // "1" or "true" to enable
+    const nopmi = searchParams.get('nopmi') // "1" or "true"
+    const dpa = searchParams.get('dpa') // down payment assistance amount
+    const rateDiscount = searchParams.get('discount') // rate discount (e.g., 0.5 for 0.5%)
+    
+    // HELOC params
+    const heloc = searchParams.get('heloc') // "1" or "true" to enable
+    
+    if (price || rental || hoa || type || down || years || rate || rent || fthb || heloc) {
       setInputs(prev => {
         const updates: Partial<SimulationParams> = {}
         
@@ -698,6 +726,34 @@ function HousePageInner() {
         if (years) updates.years = parseInt(years, 10)
         if (rate) updates.mortgageRate = parseFloat(rate) / 100 // URL param is percentage (e.g., 6.75)
         if (rent) updates.currentRent = parseFloat(rent)
+        if (income) updates.w2Income = parseFloat(income)
+        if (tax) updates.propertyTaxRate = parseFloat(tax) / 100
+        if (maint) updates.maintenanceAnnual = parseFloat(maint)
+        if (appr) updates.appreciationMean = parseFloat(appr) / 100
+        if (stock) updates.stockReturnMean = parseFloat(stock) / 100
+        
+        // FTHB setup
+        if (fthb === '1' || fthb === 'true') {
+          updates.firstTimeHomeBuyer = {
+            enabled: true,
+            noPMI: nopmi === '1' || nopmi === 'true',
+            downPaymentAssistance: dpa ? parseFloat(dpa) : 0,
+            lowerRate: rateDiscount ? true : false,
+            rateDiscount: rateDiscount ? parseFloat(rateDiscount) / 100 : 0,
+            taxCredit: 0,
+          }
+        }
+        
+        // HELOC setup
+        if (heloc === '1' || heloc === 'true') {
+          updates.heloc = {
+            enabled: true,
+            minEquityPercent: 0.30,
+            maxLTV: 0.80,
+            rate: 0.08,
+            deployToStocks: true,
+          }
+        }
         
         // Multi-family setup
         if (type && (type.includes('family') || type.includes('Family'))) {
