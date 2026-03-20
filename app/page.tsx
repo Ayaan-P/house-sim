@@ -922,6 +922,7 @@ function HousePageInner() {
         <input
           type="text"
           inputMode="decimal"
+          key={value}
           defaultValue={value}
           onBlur={(e) => {
             const parsed = parseFloat(e.target.value)
