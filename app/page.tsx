@@ -855,6 +855,7 @@ function HousePageInner() {
     const hasAdvancedParams = searchParams.get('hoa') || searchParams.get('maint') || searchParams.get('income') || 
       searchParams.get('fedbracket') || searchParams.get('appr') || searchParams.get('stock')
     const hasStrategyParams = searchParams.get('fthb') || searchParams.get('heloc')
+    console.log('URL auto-open check:', { hasAdvancedParams, hasStrategyParams, url: searchParams.toString() })
     if (hasAdvancedParams) setShowAdvanced(true)
     if (hasStrategyParams) setShowStrategies(true)
   }, [searchParams])
