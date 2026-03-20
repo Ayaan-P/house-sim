@@ -63,13 +63,21 @@ function HousePageInner() {
     const rental = searchParams.get('rental')
     const hoa = searchParams.get('hoa')
     const type = searchParams.get('type') // "2-family", "3-family", etc.
+    const down = searchParams.get('down')
+    const years = searchParams.get('years')
+    const rate = searchParams.get('rate')
+    const rent = searchParams.get('rent') // current rent (what you pay)
     
-    if (price || rental || hoa || type) {
+    if (price || rental || hoa || type || down || years || rate || rent) {
       setInputs(prev => {
         const updates: Partial<SimulationParams> = {}
         
         if (price) updates.homePrice = parseFloat(price)
         if (hoa) updates.hoaMonthly = parseFloat(hoa)
+        if (down) updates.downPaymentPercent = parseFloat(down)
+        if (years) updates.years = parseInt(years, 10)
+        if (rate) updates.mortgageRate = parseFloat(rate) / 100 // URL param is percentage (e.g., 6.75)
+        if (rent) updates.currentRent = parseFloat(rent)
         
         // Multi-family setup
         if (type && (type.includes('family') || type.includes('Family'))) {
