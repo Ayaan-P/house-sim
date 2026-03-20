@@ -642,11 +642,31 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
       const rentalShareTax = annualPropertyTax * rentalPortionCalc
       const rentalShareInsurance = annualInsurance * rentalPortionCalc
       const rentalShareHOA = annualHOA * rentalPortionCalc
+      const rentalShareMaintenance = annualMaintenance * rentalPortionCalc
       
       // Schedule E: Rental income - expenses - depreciation
       const scheduleEIncome = yearRentalIncome
-      const scheduleEExpenses = rentalShareInterest + rentalShareTax + rentalShareInsurance + rentalShareHOA + rentalDepreciation
-      rentalExpenseDeduction = Math.min(scheduleEExpenses, scheduleEIncome)  // Can't exceed income (passive loss limits simplified)
+      const scheduleEExpenses = rentalShareInterest + rentalShareTax + rentalShareInsurance + rentalShareHOA + rentalShareMaintenance + rentalDepreciation
+      
+      // Passive loss rules: 
+      // - Can deduct up to $25k of passive losses against W2 if AGI < $100k
+      // - Phases out $100-150k AGI (lose $1 for every $2 over $100k)
+      // - Above $150k AGI, no passive loss deduction (losses carry forward, but we ignore that)
+      const passiveLoss = Math.max(0, scheduleEExpenses - scheduleEIncome)
+      let passiveLossAllowance = 0
+      if (passiveLoss > 0 && w2Income < 150000) {
+        const maxAllowance = 25000
+        if (w2Income <= 100000) {
+          passiveLossAllowance = Math.min(passiveLoss, maxAllowance)
+        } else {
+          // Phase out: lose $1 for every $2 over $100k
+          const phaseOutReduction = (w2Income - 100000) / 2
+          passiveLossAllowance = Math.min(passiveLoss, Math.max(0, maxAllowance - phaseOutReduction))
+        }
+      }
+      
+      // Total rental deduction = expenses up to income + passive loss allowance
+      rentalExpenseDeduction = Math.min(scheduleEExpenses, scheduleEIncome) + passiveLossAllowance
       
       // Reduce owner-occupied deductions by rental portion
       // (Interest/tax already split - owner gets remaining portion)
