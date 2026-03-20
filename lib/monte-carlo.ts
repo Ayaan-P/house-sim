@@ -677,7 +677,12 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     
     // Total itemized (owner-occupied portion only)
     // Use calculated owner portion (from units or legacy)
-    const ownerInterestDeduction = mortgageInterestDeduction * ownerPortionCalc
+    // $750k limit applies to owner-occupied portion of loan only
+    const ownerLoanPortion = (loanAmount + yearPrincipal) * ownerPortionCalc
+    const ownerInterest = yearInterest * ownerPortionCalc
+    const ownerInterestDeduction = ownerLoanPortion <= 750000 
+      ? ownerInterest 
+      : ownerInterest * (750000 / ownerLoanPortion)
     const ownerSaltDeduction = saltDeduction * ownerPortionCalc
     const totalItemized = ownerInterestDeduction + ownerSaltDeduction
     const standardDeduction = params.filingStatus === 'married' ? 32200 : 16100  // 2026 IRS values

@@ -93,7 +93,11 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
   const ownerPropertyTax = annualPropertyTax * ownerPortion
   const stateIncomeTax = inputs.w2Income * inputs.stateRate
   const saltDeduction = Math.min(ownerPropertyTax + stateIncomeTax, 40000)
-  const mortgageInterestDeduction = Math.min(ownerInterest, loanAmount <= 750000 ? ownerInterest : ownerInterest * (750000 / loanAmount))
+  // $750k limit applies to owner-occupied portion of loan only
+  const ownerLoanPortion = loanAmount * ownerPortion
+  const mortgageInterestDeduction = ownerLoanPortion <= 750000 
+    ? ownerInterest 
+    : ownerInterest * (750000 / ownerLoanPortion)
   const totalItemized = mortgageInterestDeduction + saltDeduction
   const ownerTaxBenefit = totalItemized > standardDeduction ? (totalItemized - standardDeduction) * inputs.federalBracket : 0
   
