@@ -261,63 +261,185 @@ ${hasRental ? `### Rental (Schedule E)
   
   // Export CSV with formulas for Google Sheets
   const exportCSV = () => {
-    const csv = `Item,Value,Formula
-INPUTS,,
-Home Price,${inputs.homePrice},
-Down Payment %,${inputs.downPaymentPercent},
-Down Payment,${downPayment},=B2*B3/100
-Loan Amount,${loanAmount},=B2-B4
-Interest Rate %,${inputs.mortgageRate * 100},
-Monthly Rate,${monthlyRate},=B6/12/100
-Term (months),360,
-Monthly P&I,${monthlyPI.toFixed(0)},=B5*B7*(1+B7)^B8/((1+B7)^B8-1)
-Annual P&I,${annualPI.toFixed(0)},=B9*12
-Year 1 Interest,${year1Interest.toFixed(0)},=B5*B6/100
-Property Tax Rate %,${inputs.propertyTaxRate * 100},
-Annual Property Tax,${annualPropertyTax.toFixed(0)},=B2*B12/100
-Insurance,${inputs.insuranceAnnual},
-Maintenance,${inputs.maintenanceAnnual},
-HOA,${inputs.hoaMonthly * 12},
-W2 Income,${inputs.w2Income},
-Federal Bracket %,${inputs.federalBracket * 100},
-State Tax Rate %,${inputs.stateRate * 100},
-Rental Income/mo,${inputs.units.length > 0 ? inputs.units.filter(u => !u.ownerOccupied).reduce((s, u) => s + u.monthlyRent, 0) : inputs.rentalIncome},
-Vacancy Rate %,${(inputs.vacancyRate || 0.05) * 100},
-Annual Rental (net),${annualRentalIncome.toFixed(0)},=B20*12*(1-B21/100)
-,,
-OWNER PORTION (${(ownerPortion * 100).toFixed(0)}%),,
-Owner %,${(ownerPortion * 100).toFixed(2)},
-Owner Interest,${(year1Interest * ownerPortion).toFixed(0)},=B11*B25/100
-Owner Property Tax,${(annualPropertyTax * ownerPortion).toFixed(0)},=B13*B25/100
-State Income Tax,${(inputs.w2Income * inputs.stateRate).toFixed(0)},=B17*B19/100
-SALT (capped $40k),${saltDeduction.toFixed(0)},=MIN(B27+B28;40000)
-Mortgage Int Deduction,${mortgageInterestDeduction.toFixed(0)},=B26
-Total Itemized,${totalItemized.toFixed(0)},=B30+B29
-Standard Deduction,${standardDeduction},
-Benefit Over Standard,${Math.max(0, totalItemized - standardDeduction).toFixed(0)},=MAX(0;B31-B32)
-Owner Tax Savings,${ownerTaxBenefit.toFixed(0)},=B33*B18/100
-,,
-RENTAL PORTION (${(rentalPortion * 100).toFixed(0)}%),,
-Rental %,${(rentalPortion * 100).toFixed(2)},
-Rental Interest,${(year1Interest * rentalPortion).toFixed(0)},=B11*B37/100
-Rental Property Tax,${(annualPropertyTax * rentalPortion).toFixed(0)},=B13*B37/100
-Rental Insurance,${(annualInsurance * rentalPortion).toFixed(0)},=B14*B37/100
-Rental Maintenance,${(annualMaintenance * rentalPortion).toFixed(0)},=B15*B37/100
-Building Value (80%),${(inputs.homePrice * 0.8).toFixed(0)},=B2*0.8
-Rental Building,${(inputs.homePrice * 0.8 * rentalPortion).toFixed(0)},=B42*B37/100
-Depreciation (27.5yr),${annualDepreciation.toFixed(0)},=B43/27.5
-Total Sch E Expenses,${scheduleEExpenses.toFixed(0)},=B38+B39+B40+B41+B44
-Passive Loss,${passiveLoss.toFixed(0)},=MAX(0;B45-B22)
-Max Allowance,25000,
-AGI Phaseout,${((inputs.w2Income - 100000) / 2).toFixed(0)},=MAX(0;(B17-100000)/2)
-Allowance,${passiveLossAllowance.toFixed(0)},=MIN(B46;MAX(0;B47-B48))
-Rental Tax Savings,${rentalTaxBenefit.toFixed(0)},=B49*B18/100
-,,
-TOTALS,,
-Total Tax Savings,${totalTaxBenefit.toFixed(0)},=B34+B50
-Gross Annual Cost,${totalAnnualCostBuy.toFixed(0)},=B10+B13+B14+B15+B16
-Net Annual Cost,${netCostBuy.toFixed(0)},=B53-B22-B52
-Net Monthly Cost,${(netCostBuy / 12).toFixed(0)},=B54/12
+    // Calculate all values needed for export
+    const fthb = inputs.firstTimeHomeBuyer || { enabled: false, noPMI: false }
+    const effectivePMI = fthb.enabled && fthb.noPMI ? 0 : annualPMI
+    const costSeg = inputs.taxStrategies?.costSegregation || { enabled: false, shortLifePercent: 0.20 }
+    const qbi = inputs.taxStrategies?.qbi || { enabled: false }
+    const exitStrategy = inputs.exitStrategy || 'sell'
+    
+    // Cost segregation depreciation
+    const rentalBuildingValue = inputs.homePrice * 0.8 * rentalPortion
+    let year1Depreciation = rentalBuildingValue / 27.5
+    let suspendedLossPerYear = 0
+    if (costSeg.enabled) {
+      const shortLifeValue = rentalBuildingValue * costSeg.shortLifePercent
+      const longLifeValue = rentalBuildingValue * (1 - costSeg.shortLifePercent)
+      year1Depreciation = shortLifeValue + (longLifeValue / 27.5)
+    }
+    
+    // Passive loss with cost seg
+    const scheduleEExpensesCostSeg = (year1Interest * rentalPortion) + (annualPropertyTax * rentalPortion) + 
+      (annualInsurance * rentalPortion) + (annualMaintenance * rentalPortion) + year1Depreciation
+    const passiveLossCostSeg = Math.max(0, scheduleEExpensesCostSeg - annualRentalIncome)
+    suspendedLossPerYear = Math.max(0, passiveLossCostSeg - passiveLossAllowance)
+    
+    // Exit calculations (10 year projection)
+    const years = inputs.years || 10
+    const appreciationRate = inputs.appreciationMean || 0.05
+    const futureHomeValue = inputs.homePrice * Math.pow(1 + appreciationRate, years)
+    const totalDepreciation = costSeg.enabled 
+      ? (rentalBuildingValue * costSeg.shortLifePercent) + ((rentalBuildingValue * (1 - costSeg.shortLifePercent)) / 27.5 * years)
+      : (rentalBuildingValue / 27.5) * years
+    const totalSuspendedLosses = suspendedLossPerYear * years
+    const capitalGain = futureHomeValue - inputs.homePrice
+    const capGainsExemption = inputs.filingStatus === 'married' ? 500000 : 250000
+    const taxableGain = exitStrategy === 'remote' ? capitalGain : Math.max(0, capitalGain - capGainsExemption)
+    const capitalGainsTax = (exitStrategy === 'hold' || exitStrategy === '1031') ? 0 : taxableGain * 0.15
+    const depreciationRecapture = (exitStrategy === 'hold' || exitStrategy === '1031') ? 0 : totalDepreciation * 0.25
+    const sellingCosts = (exitStrategy === 'hold') ? 0 : futureHomeValue * 0.06
+    
+    const csv = `House vs Rent Calculator - Full Export
+Generated: ${new Date().toISOString()}
+URL: ${typeof window !== 'undefined' ? window.location.href : ''}
+
+=== INPUTS ===
+Item,Value,Formula/Notes
+
+PROPERTY,,
+Home Price,$${inputs.homePrice.toLocaleString()},
+Down Payment %,${inputs.downPaymentPercent}%,
+Down Payment,$${downPayment.toLocaleString()},=HomePrice*DownPct/100
+Loan Amount,$${loanAmount.toLocaleString()},=HomePrice-DownPayment
+Interest Rate,${(inputs.mortgageRate * 100).toFixed(2)}%,
+Loan Term,30 years,360 months
+Monthly P&I,$${monthlyPI.toFixed(0)},=PMT(rate/12;360;-LoanAmount)
+Annual P&I,$${annualPI.toFixed(0)},=MonthlyPI*12
+Year 1 Interest,$${year1Interest.toFixed(0)},Actual amortization calc (not approximation)
+
+COSTS,,
+Property Tax Rate,${(inputs.propertyTaxRate * 100).toFixed(2)}%,
+Annual Property Tax,$${annualPropertyTax.toFixed(0)},=HomePrice*TaxRate
+Insurance,$${inputs.insuranceAnnual.toLocaleString()},
+Maintenance,$${inputs.maintenanceAnnual.toLocaleString()},
+HOA,$${(inputs.hoaMonthly * 12).toLocaleString()},Annual
+PMI,$${effectivePMI.toFixed(0)},${fthb.enabled && fthb.noPMI ? 'FTHB noPMI eliminates' : 'Until 20% equity'}
+
+INCOME,,
+W2 Income,$${inputs.w2Income.toLocaleString()},
+Federal Tax Bracket,${(inputs.federalBracket * 100).toFixed(0)}%,
+State Tax Rate,${(inputs.stateRate * 100).toFixed(1)}%,
+Monthly Rental Income,$${inputs.units.length > 0 ? inputs.units.filter(u => !u.ownerOccupied).reduce((s, u) => s + u.monthlyRent, 0).toLocaleString() : inputs.rentalIncome.toLocaleString()},${inputs.units.length > 0 ? inputs.units.filter(u => !u.ownerOccupied).length + ' rental units' : ''}
+Vacancy Rate,${((inputs.vacancyRate || 0.05) * 100).toFixed(0)}%,
+Annual Rental (net vacancy),$${annualRentalIncome.toFixed(0)},=MonthlyRent*12*(1-VacancyRate)
+
+=== OWNER-OCCUPIED PORTION (${(ownerPortion * 100).toFixed(0)}%) ===
+Item,Value,Formula/Notes
+
+Owner Share,${(ownerPortion * 100).toFixed(1)}%,${inputs.units.length > 0 ? '1 of ' + inputs.units.length + ' units' : 'Based on sqft/unit split'}
+Owner Interest,$${(year1Interest * ownerPortion).toFixed(0)},=Year1Interest*OwnerPct
+Owner Property Tax,$${(annualPropertyTax * ownerPortion).toFixed(0)},=PropTax*OwnerPct
+State Income Tax,$${(inputs.w2Income * inputs.stateRate).toFixed(0)},=W2*StateRate
+SALT Deduction (capped $40k),$${saltDeduction.toFixed(0)},=MIN(OwnerPropTax+StateIncomeTax; 40000)
+Mortgage Interest Deduction,$${mortgageInterestDeduction.toFixed(0)},Owner portion (under $750k limit)
+Total Itemized,$${totalItemized.toFixed(0)},=MortgageInt+SALT
+Standard Deduction,$${standardDeduction.toLocaleString()},2026 IRS (${inputs.filingStatus || 'single'})
+Benefit Over Standard,$${Math.max(0, totalItemized - standardDeduction).toFixed(0)},=MAX(0; Itemized-Standard)
+Owner Tax Savings,$${ownerTaxBenefit.toFixed(0)},=BenefitOverStandard*FedBracket
+
+=== RENTAL PORTION (${(rentalPortion * 100).toFixed(0)}%) - SCHEDULE E ===
+Item,Value,Formula/Notes
+
+Rental Share,${(rentalPortion * 100).toFixed(1)}%,${inputs.units.length > 0 ? (inputs.units.length - 1) + ' of ' + inputs.units.length + ' units' : ''}
+Rental Interest,$${(year1Interest * rentalPortion).toFixed(0)},=Year1Interest*RentalPct
+Rental Property Tax,$${(annualPropertyTax * rentalPortion).toFixed(0)},=PropTax*RentalPct
+Rental Insurance,$${(annualInsurance * rentalPortion).toFixed(0)},=Insurance*RentalPct
+Rental Maintenance,$${(annualMaintenance * rentalPortion).toFixed(0)},=Maintenance*RentalPct
+Building Value (80% of price),$${(inputs.homePrice * 0.8).toFixed(0)},Land is not depreciable
+Rental Building Value,$${rentalBuildingValue.toFixed(0)},=BuildingValue*RentalPct
+
+DEPRECIATION,,
+Method,${costSeg.enabled ? 'Cost Segregation' : 'Standard 27.5 year'},
+${costSeg.enabled ? 'Short-Life Assets (5/7/15yr)' : 'Annual Depreciation'},$${costSeg.enabled ? (rentalBuildingValue * costSeg.shortLifePercent).toFixed(0) : (rentalBuildingValue / 27.5).toFixed(0)},${costSeg.enabled ? '20% of rental building; 100% bonus depreciation Year 1' : '=RentalBuilding/27.5'}
+${costSeg.enabled ? 'Long-Life Annual (27.5yr)' : ''}${costSeg.enabled ? ',$' + (rentalBuildingValue * (1 - costSeg.shortLifePercent) / 27.5).toFixed(0) : ''},${costSeg.enabled ? '=80%*RentalBuilding/27.5' : ''}
+Year 1 Total Depreciation,$${year1Depreciation.toFixed(0)},
+
+SCHEDULE E CALCULATION,,
+Rental Income,$${annualRentalIncome.toFixed(0)},
+Total Expenses,$${scheduleEExpensesCostSeg.toFixed(0)},=RentalInt+RentalTax+RentalIns+RentalMaint+Depreciation
+Net Rental Income (Loss),($${passiveLossCostSeg.toFixed(0)}),=Income-Expenses (negative = loss)
+
+PASSIVE LOSS RULES,,
+Max Passive Loss Allowance,$25000,IRS limit
+AGI Phaseout Start,$100000,Lose $1 for every $2 over
+Your AGI,$${inputs.w2Income.toLocaleString()},
+Phaseout Reduction,$${Math.max(0, (inputs.w2Income - 100000) / 2).toFixed(0)},=MAX(0; (AGI-100000)/2)
+Your Allowance,$${passiveLossAllowance.toFixed(0)},=MIN(PassiveLoss; MAX(0; 25000-Phaseout))
+Suspended Loss (carried forward),$${suspendedLossPerYear.toFixed(0)},=PassiveLoss-Allowance (releases at sale)
+Rental Tax Savings,$${rentalTaxBenefit.toFixed(0)},=Allowance*FedBracket
+
+${qbi.enabled ? `QBI DEDUCTION (Section 199A),,
+Net Rental Income,$${Math.max(0, annualRentalIncome - scheduleEExpenses).toFixed(0)},Must be positive
+QBI Deduction (20%),$${(Math.max(0, annualRentalIncome - scheduleEExpenses) * 0.20).toFixed(0)},=NetRentalIncome*20%
+QBI Tax Savings,$${(Math.max(0, annualRentalIncome - scheduleEExpenses) * 0.20 * inputs.federalBracket).toFixed(0)},=QBI*FedBracket
+` : ''}
+=== YEAR 1 SUMMARY ===
+Item,Value,Formula/Notes
+
+Gross Annual Cost,$${totalAnnualCostBuy.toFixed(0)},=PI+Tax+Insurance+Maintenance+HOA+PMI
+Rental Income Offset,-$${annualRentalIncome.toFixed(0)},
+Tax Savings,-$${totalTaxBenefit.toFixed(0)},=OwnerTaxSavings+RentalTaxSavings
+Net Annual Cost,$${netCostBuy.toFixed(0)},=Gross-Rental-TaxSavings
+Net Monthly Cost,$${(netCostBuy / 12).toFixed(0)},=NetAnnual/12
+
+Comparison to Renting,,
+Your Current Rent,$${inputs.currentRent}/mo,
+Annual Rent,$${(inputs.currentRent * 12).toFixed(0)},
+Buying Costs More By,$${(netCostBuy - inputs.currentRent * 12).toFixed(0)}/yr,${netCostBuy > inputs.currentRent * 12 ? 'But you build equity' : 'Buying is cheaper!'}
+
+=== EXIT ANALYSIS (Year ${years}) ===
+Item,Value,Formula/Notes
+
+Exit Strategy,${exitStrategy.toUpperCase()},${exitStrategy === 'sell' ? 'Pay all taxes' : exitStrategy === 'hold' ? 'Never sell (buy-borrow-die)' : exitStrategy === '1031' ? 'Defer taxes via exchange' : 'Move away; full rental'}
+
+APPRECIATION,,
+Annual Rate,${(appreciationRate * 100).toFixed(1)}%,Mean assumption
+Future Home Value,$${futureHomeValue.toFixed(0)},=HomePrice*(1+Rate)^Years
+Capital Gain,$${capitalGain.toFixed(0)},=FutureValue-HomePrice
+Primary Residence Exemption,$${exitStrategy === 'remote' ? 0 : capGainsExemption.toLocaleString()},${exitStrategy === 'remote' ? 'Lost (not primary residence)' : '($250k single / $500k married)'}
+Taxable Gain,$${taxableGain.toFixed(0)},=Gain-Exemption
+Capital Gains Tax (15%),$${capitalGainsTax.toFixed(0)},${exitStrategy === 'hold' || exitStrategy === '1031' ? 'Deferred (exit strategy)' : '=TaxableGain*15%'}
+
+DEPRECIATION RECAPTURE,,
+Total Depreciation Taken,$${totalDepreciation.toFixed(0)},=${years} years of depreciation
+Recapture Tax (25%),$${depreciationRecapture.toFixed(0)},${exitStrategy === 'hold' || exitStrategy === '1031' ? 'Deferred (exit strategy)' : '=TotalDepr*25%'}
+
+SUSPENDED LOSSES,,
+Annual Suspended,$${suspendedLossPerYear.toFixed(0)},Losses over passive allowance
+Total Suspended (${years}yr),$${totalSuspendedLosses.toFixed(0)},Release at sale to offset gains
+Tax Benefit at Sale,$${(totalSuspendedLosses * inputs.federalBracket).toFixed(0)},=Suspended*FedBracket
+
+NET EXIT,,
+Selling Costs (6%),$${sellingCosts.toFixed(0)},${exitStrategy === 'hold' ? 'None (not selling)' : '=FutureValue*6%'}
+Cap Gains Tax,$${capitalGainsTax.toFixed(0)},
+Depreciation Recapture,$${depreciationRecapture.toFixed(0)},
+Suspended Loss Offset,-$${(totalSuspendedLosses * inputs.federalBracket).toFixed(0)},
+Total Exit Taxes,$${(capitalGainsTax + depreciationRecapture - totalSuspendedLosses * inputs.federalBracket).toFixed(0)},
+
+=== ASSUMPTIONS & SOURCES ===
+Item,Value,Source
+
+Standard Deduction (Single),$16100,IRS 2026
+Standard Deduction (Married),$32200,IRS 2026
+SALT Cap,$40000,OBBBA 2026
+Mortgage Interest Limit,$750000,OBBBA 2026 (permanent)
+Depreciation Period,27.5 years,IRS Pub 527
+Building Value %,80%,IRS guideline (land not depreciable)
+Passive Loss Max,$25000,IRS Pub 925
+Passive Loss Phaseout,$100k-$150k AGI,IRS Pub 925
+Capital Gains Rate,15%,LTCG for most brackets
+Depreciation Recapture,25%,Section 1250
+Primary Residence Exemption,$250k/$500k,Section 121
 `
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
