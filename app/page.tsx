@@ -748,6 +748,12 @@ function HousePageInner() {
     const pBool = (key: string) => p(key) === '1' || p(key) === 'true'
     const pPct = (key: string) => pNum(key) !== null ? pNum(key)! / 100 : null  // Convert percentage to decimal
     
+    // Auto-open collapsed sections BEFORE early return (even if no params change inputs)
+    const hasAdvancedParams = p('hoa') || p('maint') || p('income') || p('fedbracket') || p('appr') || p('stock')
+    const hasStrategyParams = p('fthb') || p('heloc')
+    if (hasAdvancedParams) setShowAdvanced(true)
+    if (hasStrategyParams) setShowStrategies(true)
+    
     // Check if any params exist
     if (!searchParams.toString()) return
     
@@ -850,14 +856,6 @@ function HousePageInner() {
       
       return { ...prev, ...updates }
     })
-    
-    // Auto-open collapsed sections if URL has relevant params
-    const hasAdvancedParams = searchParams.get('hoa') || searchParams.get('maint') || searchParams.get('income') || 
-      searchParams.get('fedbracket') || searchParams.get('appr') || searchParams.get('stock')
-    const hasStrategyParams = searchParams.get('fthb') || searchParams.get('heloc')
-    console.log('URL auto-open check:', { hasAdvancedParams, hasStrategyParams, url: searchParams.toString() })
-    if (hasAdvancedParams) setShowAdvanced(true)
-    if (hasStrategyParams) setShowStrategies(true)
   }, [searchParams])
   
   const update = useCallback((key: keyof SimulationParams, value: number | boolean | object | string) => {
