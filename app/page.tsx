@@ -66,7 +66,7 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
   // Annual costs
   const annualPropertyTax = inputs.homePrice * inputs.propertyTaxRate
   const annualInsurance = inputs.insuranceAnnual
-  const annualMaintenance = inputs.homePrice * inputs.maintenancePercent
+  const annualMaintenance = inputs.maintenanceAnnual || 0  // Flat annual cost, not % of home
   const annualHOA = inputs.hoaMonthly * 12
   const annualPMI = (loanAmount / inputs.homePrice) > 0.8 ? loanAmount * 0.005 : 0
   
@@ -196,7 +196,7 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
                 <span className="font-mono">{formatCurrency(annualInsurance)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Maintenance ({(inputs.maintenancePercent * 100).toFixed(1)}%)</span>
+                <span>Maintenance/Repairs</span>
                 <span className="font-mono">{formatCurrency(annualMaintenance)}</span>
               </div>
               {inputs.hoaMonthly > 0 && (
@@ -843,7 +843,7 @@ function HousePageInner() {
           <div className="mt-4 p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               <InputField label="HOA/mo" value={inputs.hoaMonthly} onChange={(v: number) => update('hoaMonthly', v)} prefix="$" />
-              <InputField label="Repairs/yr" value={inputs.majorRepairReserve} onChange={(v: number) => update('majorRepairReserve', v)} prefix="$" />
+              <InputField label="Maintenance/yr" value={inputs.maintenanceAnnual} onChange={(v: number) => update('maintenanceAnnual', v)} prefix="$" />
               <InputField label="Closing %" value={inputs.closingCostPercent} onChange={(v: number) => update('closingCostPercent', v)} suffix="%" />
               <InputField label="W2 Income" value={inputs.w2Income} onChange={(v: number) => update('w2Income', v)} prefix="$" />
               <InputField label="Fed Tax" value={(inputs.federalBracket * 100).toFixed(0)} onChange={(v: number) => update('federalBracket', v / 100)} suffix="%" />

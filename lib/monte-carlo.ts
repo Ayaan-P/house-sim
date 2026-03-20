@@ -98,12 +98,11 @@ export interface SimulationParams {
   mortgageRate: number
   propertyTaxRate: number
   insuranceAnnual: number
-  maintenancePercent: number
   
   // Additional costs
   closingCostPercent: number      // Upfront closing costs (2-5%)
   hoaMonthly: number              // HOA fees
-  majorRepairReserve: number      // Annual reserve for major repairs (on top of maintenance)
+  maintenanceAnnual: number       // Annual maintenance/repair reserve (flat $, not % of home value)
   
   // Multi-family configuration
   units: Unit[]                   // Empty array = single-family mode (uses legacy rentalIncome)
@@ -361,7 +360,7 @@ export function runSimulation(params: SimulationParams): SimulationSummary {
 function simulateSingleRun(params: SimulationParams, runId: number): SimulationRun {
   const {
     homePrice, downPaymentPercent, mortgageRate, propertyTaxRate,
-    insuranceAnnual, maintenancePercent, houseHack, rentalIncome,
+    insuranceAnnual, houseHack, rentalIncome,
     rentalIncomeGrowth, w2Income, federalBracket, stateRate,
     currentRent, rentGrowth, appreciationMean, appreciationStdDev,
     stockReturnMean, stockReturnStdDev, years, scenarios, heloc,
@@ -562,10 +561,12 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     
     const annualPropertyTax = homePrice * propertyTaxRate * taxGrowthFactor
     const annualInsurance = insuranceAnnual * insuranceGrowthFactor
-    const annualMaintenance = homeValue * maintenancePercent
+    // Maintenance is a flat annual cost, not % of home value (a $2M home doesn't cost 2x to maintain)
+    // maintenanceAnnual covers repairs, appliances, HVAC, etc.
+    // For condos with HOA, this should be lower since HOA covers exterior/structural
+    const annualMaintenance = (params.maintenanceAnnual || 0) * Math.pow(1.03, year - 1)  // Grows with inflation ~3%/yr
     const annualPMI = (fthb.enabled && fthb.noPMI) ? 0 : ((loanAmount / homeValue) > 0.8 ? loanAmount * 0.005 : 0)
     const annualHOA = (params.hoaMonthly || 0) * 12 * Math.pow(1.03, year - 1)  // HOA grows 3%/yr
-    const annualMajorRepairs = params.majorRepairReserve || 0
     
     // Recalculate P&I if refinanced
     let currentAnnualPI = annualPI
@@ -579,7 +580,7 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
       }
     }
     
-    const totalAnnualCost = currentAnnualPI + annualPropertyTax + annualInsurance + annualMaintenance + annualPMI + annualHOA + annualMajorRepairs
+    const totalAnnualCost = currentAnnualPI + annualPropertyTax + annualInsurance + annualMaintenance + annualPMI + annualHOA
     
     // Interest and principal - calculate from actual loan balance (month by month)
     // This is more accurate than the previous approximation which diverged after year 5
@@ -822,12 +823,11 @@ export const defaultParams: SimulationParams = {
   mortgageRate: 0.0675,           // Current 30yr fixed (March 2026)
   propertyTaxRate: 0.011,         // Cambridge rate
   insuranceAnnual: 1440,          // ~$120/mo
-  maintenancePercent: 0.01,
   
   // Additional costs
   closingCostPercent: 3,          // 3% closing costs
   hoaMonthly: 500,                // 2BR condo fee estimate
-  majorRepairReserve: 2000,       // $2k/yr reserve for big stuff
+  maintenanceAnnual: 3000,        // $3k/yr for interior repairs/appliances (condo w/ HOA covers exterior)
   
   // Multi-family units (empty = single-family mode)
   units: [],
