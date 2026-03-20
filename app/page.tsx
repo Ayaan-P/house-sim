@@ -1406,6 +1406,44 @@ function HousePageInner() {
               </label>
             </div>
             
+            {/* Advanced Tax Strategies */}
+            <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+              <div className="text-white/50 text-sm mb-3">Advanced Tax Strategies</div>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 text-sm cursor-pointer" title="Accelerate depreciation by reclassifying 20% of building as 5/7/15-year assets. 100% bonus depreciation in Year 1.">
+                  <input type="checkbox" checked={inputs.taxStrategies?.costSegregation?.enabled || false}
+                    onChange={(e) => update('taxStrategies', {
+                      ...inputs.taxStrategies,
+                      costSegregation: { 
+                        enabled: e.target.checked, 
+                        shortLifePercent: 0.20, 
+                        year1BonusDepreciation: 1.0 
+                      }
+                    })}
+                    className="w-4 h-4 rounded border-purple-500/50 bg-black text-purple-500" />
+                  <span className="text-purple-300 font-medium">Cost Segregation Study</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer" title="20% QBI deduction on net rental income. Requires 250+ hours/year managing property.">
+                  <input type="checkbox" checked={inputs.taxStrategies?.qbi?.enabled || false}
+                    onChange={(e) => update('taxStrategies', {
+                      ...inputs.taxStrategies,
+                      qbi: { enabled: e.target.checked, qualifiesAsBusiness: e.target.checked }
+                    })}
+                    className="w-4 h-4 rounded border-amber-500/50 bg-black text-amber-500" />
+                  <span className="text-amber-300 font-medium">QBI Deduction (199A)</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer" title="Defer capital gains and depreciation recapture by reinvesting into like-kind property.">
+                  <input type="checkbox" checked={inputs.taxStrategies?.exchange1031?.enabled || false}
+                    onChange={(e) => update('taxStrategies', {
+                      ...inputs.taxStrategies,
+                      exchange1031: { enabled: e.target.checked }
+                    })}
+                    className="w-4 h-4 rounded border-cyan-500/50 bg-black text-cyan-500" />
+                  <span className="text-cyan-300 font-medium">1031 Exchange</span>
+                </label>
+              </div>
+            </div>
+            
             {/* Scenarios */}
             <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
               <div className="text-white/50 text-sm mb-3">Scenarios</div>

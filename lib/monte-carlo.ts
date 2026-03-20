@@ -168,6 +168,28 @@ export interface SimulationParams {
     refinance?: { probability: number; yearRange: [number, number]; newRate: number }
     earlySale?: { probability: number; yearRange: [number, number]; sellingCostPercent: number }
   }
+  
+  // Advanced tax strategies
+  taxStrategies: {
+    // Cost Segregation Study - accelerate depreciation on 5/7/15 year assets
+    costSegregation: {
+      enabled: boolean
+      // Typical breakdown: 15-25% of building value can be reclassified
+      shortLifePercent: number     // % of building value that's 5/7/15 year property (default 0.20)
+      year1BonusDepreciation: number  // 100% in 2026 under OBBBA (default 1.0)
+    }
+    // QBI Deduction (Section 199A) - 20% deduction on qualified business income
+    qbi: {
+      enabled: boolean
+      // Safe harbor: 250+ hours/year managing property = qualifies as trade/business
+      qualifiesAsBusiness: boolean
+    }
+    // 1031 Exchange - defer capital gains on sale by reinvesting
+    exchange1031: {
+      enabled: boolean
+      // If enabled, capital gains and depreciation recapture are deferred (not taxed at sale)
+    }
+  }
 }
 
 export interface YearResult {
@@ -630,12 +652,40 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     // Rental depreciation (if renting out any portion)
     let rentalDepreciation = 0
     let rentalExpenseDeduction = 0
+    let qbiDeduction = 0
+    const taxStrategies = params.taxStrategies || { costSegregation: { enabled: false, shortLifePercent: 0.20, year1BonusDepreciation: 1.0 }, qbi: { enabled: false, qualifiesAsBusiness: false }, exchange1031: { enabled: false } }
+    
     if (hasRentalIncome && yearRentalIncome > 0) {
       // Depreciation: rental portion of building value over 27.5 years
       const buildingValuePct = params.buildingValuePercent || 0.80  // Default 80% building, 20% land
       const buildingValue = homePrice * buildingValuePct
-      // Use calculated rental portion (from units or legacy 0.50)
-      rentalDepreciation = (buildingValue * rentalPortionCalc) / 27.5
+      const rentalBuildingValue = buildingValue * rentalPortionCalc
+      
+      // Cost Segregation: accelerate depreciation on short-life assets
+      let yearDepreciation = 0
+      if (taxStrategies.costSegregation?.enabled && year === 1) {
+        // Year 1: Take bonus depreciation on short-life assets (5/7/15 year property)
+        const shortLifePercent = taxStrategies.costSegregation.shortLifePercent || 0.20
+        const bonusRate = taxStrategies.costSegregation.year1BonusDepreciation || 1.0  // 100% in 2026
+        const shortLifeValue = rentalBuildingValue * shortLifePercent
+        const longLifeValue = rentalBuildingValue * (1 - shortLifePercent)
+        
+        // Bonus depreciation on short-life assets (100% in Year 1)
+        const bonusDepreciation = shortLifeValue * bonusRate
+        // Regular 27.5 year depreciation on remaining building
+        const regularDepreciation = longLifeValue / 27.5
+        
+        yearDepreciation = bonusDepreciation + regularDepreciation
+      } else if (taxStrategies.costSegregation?.enabled && year > 1) {
+        // After Year 1: only depreciate the long-life portion
+        const shortLifePercent = taxStrategies.costSegregation.shortLifePercent || 0.20
+        const longLifeValue = rentalBuildingValue * (1 - shortLifePercent)
+        yearDepreciation = longLifeValue / 27.5
+      } else {
+        // Standard 27.5 year straight-line depreciation
+        yearDepreciation = rentalBuildingValue / 27.5
+      }
+      rentalDepreciation = yearDepreciation
       
       // Rental expenses (rental portion of deductible costs)
       const rentalShareInterest = cappedInterestDeduction * rentalPortionCalc
@@ -647,6 +697,16 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
       // Schedule E: Rental income - expenses - depreciation
       const scheduleEIncome = yearRentalIncome
       const scheduleEExpenses = rentalShareInterest + rentalShareTax + rentalShareInsurance + rentalShareHOA + rentalShareMaintenance + rentalDepreciation
+      
+      // Net rental income (for QBI calculation)
+      const netRentalIncome = Math.max(0, scheduleEIncome - scheduleEExpenses)
+      
+      // QBI Deduction (Section 199A): 20% of qualified business income
+      if (taxStrategies.qbi?.enabled && taxStrategies.qbi?.qualifiesAsBusiness && netRentalIncome > 0) {
+        // QBI = 20% of net rental income
+        // Subject to W-2 wage limit and taxable income limit, but simplified here
+        qbiDeduction = netRentalIncome * 0.20
+      }
       
       // Passive loss rules: 
       // - Can deduct up to $25k of passive losses against W2 if AGI < $100k
@@ -689,11 +749,13 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     const standardDeduction = params.filingStatus === 'married' ? 32200 : 16100  // 2026 IRS values
     const itemizedBenefit = Math.max(0, totalItemized - standardDeduction)
     
-    // Total tax savings: itemized benefit + rental deduction benefit
+    // Total tax savings: itemized benefit + rental deduction benefit + QBI
     const fthbTaxCredit = (fthb.enabled && fthb.taxCredit) ? fthb.taxCredit : 0
     const ownerOccupiedSavings = itemizedBenefit * (federalBracket + stateRate * 0.5)
     const rentalTaxSavings = rentalExpenseDeduction * federalBracket  // Rental losses offset at marginal rate
-    const yearTaxSavings = jobLossActive ? 0 : ownerOccupiedSavings + rentalTaxSavings + fthbTaxCredit
+    // QBI is a deduction, so tax savings = qbiDeduction * marginal rate
+    const qbiTaxSavings = qbiDeduction * federalBracket
+    const yearTaxSavings = jobLossActive ? 0 : ownerOccupiedSavings + rentalTaxSavings + qbiTaxSavings + fthbTaxCredit
     cumulativeTaxSavings += yearTaxSavings
     
     // Update rental income for next year (already calculated yearRentalIncome above)
@@ -811,13 +873,23 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
   
   // Capital gains (appreciation above purchase price, minus exemption)
   // $250k for single, $500k for married filing jointly
-  const capGainsExemption = params.filingStatus === 'married' ? 500000 : 250000
-  const totalGain = finalHomeValue - homePrice
-  const taxableGain = Math.max(0, totalGain - capGainsExemption)
-  const capitalGainsTax = taxableGain * (params.capitalGainsTaxRate || 0.15)
+  // 1031 Exchange: if enabled, defer capital gains and depreciation recapture
+  const taxStrategies = params.taxStrategies || { costSegregation: { enabled: false, shortLifePercent: 0.20, year1BonusDepreciation: 1.0 }, qbi: { enabled: false, qualifiesAsBusiness: false }, exchange1031: { enabled: false } }
+  const is1031Exchange = taxStrategies.exchange1031?.enabled || false
   
-  // Depreciation recapture (25% rate on depreciation taken)
-  const depreciationRecapture = cumulativeDepreciation * 0.25
+  let capitalGainsTax = 0
+  let depreciationRecapture = 0
+  
+  if (!is1031Exchange) {
+    const capGainsExemption = params.filingStatus === 'married' ? 500000 : 250000
+    const totalGain = finalHomeValue - homePrice
+    const taxableGain = Math.max(0, totalGain - capGainsExemption)
+    capitalGainsTax = taxableGain * (params.capitalGainsTaxRate || 0.15)
+    
+    // Depreciation recapture (25% rate on depreciation taken)
+    depreciationRecapture = cumulativeDepreciation * 0.25
+  }
+  // If 1031 exchange, both are $0 (deferred)
   
   // Net proceeds from sale (includes depreciation recapture)
   const saleProceeds = finalHomeValue - finalLoanBalance - finalHelocBalance - sellingCosts - capitalGainsTax - depreciationRecapture
@@ -910,6 +982,22 @@ export const defaultParams: SimulationParams = {
   },
   
   scenarios: {},
+  
+  // Advanced tax strategies (all disabled by default)
+  taxStrategies: {
+    costSegregation: {
+      enabled: false,
+      shortLifePercent: 0.20,        // 20% of building is 5/7/15 year property
+      year1BonusDepreciation: 1.0,   // 100% bonus depreciation in 2026
+    },
+    qbi: {
+      enabled: false,
+      qualifiesAsBusiness: false,    // Need 250+ hours/year to qualify
+    },
+    exchange1031: {
+      enabled: false,                // Defer cap gains by reinvesting
+    },
+  },
 }
 
 // ============================================
