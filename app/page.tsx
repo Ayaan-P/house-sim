@@ -956,12 +956,18 @@ function HousePageInner() {
     </div>
   )
 
-  // Collapsible state - auto-open if URL has relevant params
-  const hasAdvancedParams = searchParams.get('hoa') || searchParams.get('maint') || searchParams.get('income') || 
-    searchParams.get('fedbracket') || searchParams.get('appr') || searchParams.get('stock')
-  const hasStrategyParams = searchParams.get('fthb') || searchParams.get('heloc')
-  const [showAdvanced, setShowAdvanced] = useState(!!hasAdvancedParams)
-  const [showStrategies, setShowStrategies] = useState(!!hasStrategyParams)
+  // Collapsible state
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showStrategies, setShowStrategies] = useState(false)
+  
+  // Auto-open sections if URL has relevant params (after hydration)
+  useEffect(() => {
+    const hasAdvancedParams = searchParams.get('hoa') || searchParams.get('maint') || searchParams.get('income') || 
+      searchParams.get('fedbracket') || searchParams.get('appr') || searchParams.get('stock')
+    const hasStrategyParams = searchParams.get('fthb') || searchParams.get('heloc')
+    if (hasAdvancedParams) setShowAdvanced(true)
+    if (hasStrategyParams) setShowStrategies(true)
+  }, [searchParams])
   
   // Calculate rental summary for display
   const rentalSummary = inputs.units.length > 0 
