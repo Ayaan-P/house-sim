@@ -581,13 +581,22 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     
     const totalAnnualCost = currentAnnualPI + annualPropertyTax + annualInsurance + annualMaintenance + annualPMI + annualHOA + annualMajorRepairs
     
-    // Interest and principal (more accurate amortization estimate)
-    // At 6.75%, 30yr: Year 1 ~85% interest, Year 15 ~53%, Year 30 ~5%
-    // Using exponential decay: interestPortion = 0.85 * 0.97^(year-1)
-    const interestPortion = Math.max(0.05, 0.85 * Math.pow(0.97, year - 1))
-    const yearInterest = currentAnnualPI * interestPortion
-    const yearPrincipal = currentAnnualPI - yearInterest
-    loanAmount = Math.max(0, loanAmount - yearPrincipal)
+    // Interest and principal - calculate from actual loan balance (month by month)
+    // This is more accurate than the previous approximation which diverged after year 5
+    let yearInterest = 0
+    let yearPrincipal = 0
+    let tempBalance = loanAmount
+    const effectiveMonthlyRate = currentMortgageRate / 12
+    const currentMonthlyPI = monthlyPI  // Use the payment calculated at loan origination
+    
+    for (let month = 0; month < 12; month++) {
+      const monthInterest = tempBalance * effectiveMonthlyRate
+      const monthPrincipal = Math.min(currentMonthlyPI - monthInterest, tempBalance)
+      yearInterest += monthInterest
+      yearPrincipal += monthPrincipal
+      tempBalance = Math.max(0, tempBalance - monthPrincipal)
+    }
+    loanAmount = tempBalance  // Update loan balance after this year's payments
     
     // Tax savings (updated for OBBBA 2025)
     // $750k mortgage interest deduction cap (OBBBA made permanent)
@@ -713,10 +722,18 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     // KEY: As rent grows, renter has LESS to invest each year
     // Samar fix: Buyer also invests savings when housing cost < market rent
     const monthlySavingsDiff = (yearCostBuy - yearRent) / 12
+    
+    // Monthly compounding for contributions: FV of annuity = PMT * [((1+r)^n - 1) / r]
+    // where r = monthly return, n = 12 months
+    const monthlyReturn = Math.pow(1 + stockReturn, 1/12) - 1
+    const annuityFactor = monthlyReturn > 0.0001 
+      ? ((Math.pow(1 + monthlyReturn, 12) - 1) / monthlyReturn)
+      : 12  // If return ~0, just sum the contributions
+    
     if (monthlySavingsDiff > 0) {
       // Buying costs more, so renter invests the difference throughout the year
-      // Simplified: invest half at start of year, half grows full year
-      stockPortfolio = stockPortfolio * (1 + stockReturn) + monthlySavingsDiff * 6 * (1 + stockReturn / 2)
+      // Existing portfolio grows for full year, contributions compound monthly
+      stockPortfolio = stockPortfolio * (1 + stockReturn) + monthlySavingsDiff * annuityFactor
       // Buyer has no savings to invest
       buyerStockPortfolio = buyerStockPortfolio * (1 + stockReturn)
     } else {
@@ -725,7 +742,7 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
       stockPortfolio = stockPortfolio * (1 + stockReturn)
       // Buyer invests the savings (negative diff = positive savings for buyer)
       const buyerMonthlySavings = -monthlySavingsDiff
-      buyerStockPortfolio = buyerStockPortfolio * (1 + stockReturn) + buyerMonthlySavings * 6 * (1 + stockReturn / 2)
+      buyerStockPortfolio = buyerStockPortfolio * (1 + stockReturn) + buyerMonthlySavings * annuityFactor
     }
     
     // Note: Rent inflation is already modeled via rentGrowth - currentRentAmount grows each year
