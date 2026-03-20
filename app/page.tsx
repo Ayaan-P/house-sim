@@ -74,13 +74,6 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
   const year1Interest = annualPI * 0.85
   const year1Principal = annualPI - year1Interest
   
-  // Tax deductions
-  const standardDeduction = inputs.filingStatus === 'married' ? 31000 : 15500
-  const saltDeduction = Math.min(annualPropertyTax + (inputs.w2Income * inputs.stateRate), 40000)
-  const mortgageInterestDeduction = Math.min(year1Interest, loanAmount <= 750000 ? year1Interest : year1Interest * (750000 / loanAmount))
-  const totalItemized = mortgageInterestDeduction + saltDeduction
-  const taxBenefit = totalItemized > standardDeduction ? (totalItemized - standardDeduction) * inputs.federalBracket : 0
-  
   // Rental income (if applicable)
   const hasRental = inputs.units.length > 0 || inputs.houseHack
   const monthlyRentalIncome = inputs.units.length > 0 
@@ -88,9 +81,56 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
     : inputs.houseHack ? inputs.rentalIncome : 0
   const annualRentalIncome = monthlyRentalIncome * 12 * (1 - (inputs.vacancyRate || 0))
   
+  // Owner vs rental portion
+  const ownerPortion = inputs.units.length > 0 
+    ? inputs.units.filter(u => u.ownerOccupied).length / inputs.units.length
+    : inputs.houseHack ? 0.5 : 1.0
+  const rentalPortion = 1 - ownerPortion
+  
+  // Tax deductions - owner portion
+  const standardDeduction = inputs.filingStatus === 'married' ? 31000 : 15500
+  const ownerInterest = year1Interest * ownerPortion
+  const ownerPropertyTax = annualPropertyTax * ownerPortion
+  const stateIncomeTax = inputs.w2Income * inputs.stateRate
+  const saltDeduction = Math.min(ownerPropertyTax + stateIncomeTax, 40000)
+  const mortgageInterestDeduction = Math.min(ownerInterest, loanAmount <= 750000 ? ownerInterest : ownerInterest * (750000 / loanAmount))
+  const totalItemized = mortgageInterestDeduction + saltDeduction
+  const ownerTaxBenefit = totalItemized > standardDeduction ? (totalItemized - standardDeduction) * inputs.federalBracket : 0
+  
+  // Rental tax benefits - Schedule E
+  const buildingValue = inputs.homePrice * (inputs.buildingValuePercent || 0.80)
+  const rentalBuildingValue = buildingValue * rentalPortion
+  const annualDepreciation = hasRental ? rentalBuildingValue / 27.5 : 0
+  
+  const rentalInterest = year1Interest * rentalPortion
+  const rentalPropertyTax = annualPropertyTax * rentalPortion
+  const rentalInsurance = annualInsurance * rentalPortion
+  const rentalHOA = annualHOA * rentalPortion
+  const rentalMaintenance = annualMaintenance * rentalPortion
+  
+  const scheduleEExpenses = rentalInterest + rentalPropertyTax + rentalInsurance + rentalHOA + rentalMaintenance + annualDepreciation
+  const passiveLoss = Math.max(0, scheduleEExpenses - annualRentalIncome)
+  
+  // Passive loss allowance ($25k, phases out $100-150k AGI)
+  let passiveLossAllowance = 0
+  if (passiveLoss > 0 && inputs.w2Income < 150000) {
+    const maxAllowance = 25000
+    if (inputs.w2Income <= 100000) {
+      passiveLossAllowance = Math.min(passiveLoss, maxAllowance)
+    } else {
+      const phaseOutReduction = (inputs.w2Income - 100000) / 2
+      passiveLossAllowance = Math.min(passiveLoss, Math.max(0, maxAllowance - phaseOutReduction))
+    }
+  }
+  
+  const rentalDeduction = Math.min(scheduleEExpenses, annualRentalIncome) + passiveLossAllowance
+  const rentalTaxBenefit = rentalDeduction * inputs.federalBracket
+  
+  const totalTaxBenefit = ownerTaxBenefit + rentalTaxBenefit
+  
   // Total cost of buying (Year 1)
   const totalAnnualCostBuy = annualPI + annualPropertyTax + annualInsurance + annualMaintenance + annualHOA + annualPMI
-  const netCostBuy = totalAnnualCostBuy - annualRentalIncome - taxBenefit
+  const netCostBuy = totalAnnualCostBuy - annualRentalIncome - totalTaxBenefit
   
   // Rent scenario
   const annualRent = inputs.currentRent * 12
@@ -219,14 +259,14 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
               {/* Deductions */}
               {hasRental && (
                 <div className="flex justify-between text-green-400">
-                  <span>− Rental Income (after {(inputs.vacancyRate * 100).toFixed(0)}% vacancy)</span>
+                  <span>− Rental Income (after {((inputs.vacancyRate || 0) * 100).toFixed(0)}% vacancy)</span>
                   <span className="font-mono">−{formatCurrency(annualRentalIncome)}</span>
                 </div>
               )}
-              {taxBenefit > 0 && (
+              {totalTaxBenefit > 0 && (
                 <div className="flex justify-between text-green-400">
-                  <span>− Tax Savings (itemized − standard)</span>
-                  <span className="font-mono">−{formatCurrency(taxBenefit)}</span>
+                  <span>− Tax Savings (owner + rental)</span>
+                  <span className="font-mono">−{formatCurrency(totalTaxBenefit)}</span>
                 </div>
               )}
               
@@ -245,39 +285,94 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
           <div className="p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
             <h4 className="text-yellow-400 font-bold mb-3">Step 4: Tax Deductions Explained</h4>
             <div className="space-y-2 text-white/80">
-              <div className="flex justify-between">
+              {hasRental && (
+                <div className="text-white/50 text-xs mb-2">
+                  Owner portion: {(ownerPortion * 100).toFixed(0)}% | Rental portion: {(rentalPortion * 100).toFixed(0)}%
+                </div>
+              )}
+              
+              {/* Owner-Occupied Deductions */}
+              <div className="text-white/60 text-xs mt-2">Owner-Occupied (Schedule A):</div>
+              <div className="flex justify-between pl-4">
                 <span>Standard Deduction ({inputs.filingStatus})</span>
                 <span className="font-mono">{formatCurrency(standardDeduction)}</span>
               </div>
-              <div className="text-white/50 text-xs my-2">vs. Itemized Deductions:</div>
               <div className="flex justify-between pl-4">
-                <span>Mortgage Interest (Year 1)</span>
+                <span>Mortgage Interest ({(ownerPortion * 100).toFixed(0)}%)</span>
                 <span className="font-mono">{formatCurrency(mortgageInterestDeduction)}</span>
               </div>
               <div className="flex justify-between pl-4">
                 <span>SALT (capped at $40k)</span>
                 <span className="font-mono">{formatCurrency(saltDeduction)}</span>
               </div>
-              <div className="flex justify-between pl-4 border-t border-white/10 pt-2">
+              <div className="flex justify-between pl-4">
                 <span>Total Itemized</span>
                 <span className="font-mono">{formatCurrency(totalItemized)}</span>
               </div>
-              <div className="flex justify-between pt-2">
-                <span>Benefit Over Standard ({totalItemized > standardDeduction ? '+' : ''}{formatCurrency(totalItemized - standardDeduction)})</span>
-                <span className={`font-mono ${totalItemized > standardDeduction ? 'text-green-400' : 'text-red-400'}`}>
-                  {totalItemized > standardDeduction ? '✓ Itemize' : '✗ Take Standard'}
+              <div className="flex justify-between pl-4">
+                <span>Benefit Over Standard</span>
+                <span className={`font-mono ${totalItemized > standardDeduction ? 'text-green-400' : 'text-white/40'}`}>
+                  {totalItemized > standardDeduction ? `+${formatCurrency(totalItemized - standardDeduction)}` : 'None'}
                 </span>
               </div>
-              {taxBenefit > 0 && (
-                <div className="flex justify-between text-yellow-400 border-t border-white/10 pt-2">
-                  <span className="font-bold">Tax Savings (at {(inputs.federalBracket * 100).toFixed(0)}% bracket)</span>
-                  <span className="font-mono font-bold">{formatCurrency(taxBenefit)}/yr</span>
+              {ownerTaxBenefit > 0 && (
+                <div className="flex justify-between pl-4 text-yellow-400">
+                  <span>Owner Tax Savings</span>
+                  <span className="font-mono">{formatCurrency(ownerTaxBenefit)}</span>
                 </div>
               )}
+              
+              {/* Rental Deductions */}
+              {hasRental && (
+                <>
+                  <div className="text-white/60 text-xs mt-4">Rental (Schedule E):</div>
+                  <div className="flex justify-between pl-4">
+                    <span>Rental Income</span>
+                    <span className="font-mono">{formatCurrency(annualRentalIncome)}</span>
+                  </div>
+                  <div className="flex justify-between pl-4">
+                    <span>Rental Expenses (interest, tax, ins, maint)</span>
+                    <span className="font-mono">{formatCurrency(scheduleEExpenses - annualDepreciation)}</span>
+                  </div>
+                  <div className="flex justify-between pl-4">
+                    <span>+ Depreciation (27.5 yr)</span>
+                    <span className="font-mono">{formatCurrency(annualDepreciation)}</span>
+                  </div>
+                  <div className="flex justify-between pl-4">
+                    <span>Total Schedule E Expenses</span>
+                    <span className="font-mono">{formatCurrency(scheduleEExpenses)}</span>
+                  </div>
+                  {passiveLoss > 0 && (
+                    <>
+                      <div className="flex justify-between pl-4 text-orange-400">
+                        <span>Passive Loss (expenses − income)</span>
+                        <span className="font-mono">{formatCurrency(passiveLoss)}</span>
+                      </div>
+                      <div className="flex justify-between pl-4 text-green-400">
+                        <span>Passive Loss Allowance (up to $25k)</span>
+                        <span className="font-mono">{formatCurrency(passiveLossAllowance)}</span>
+                      </div>
+                      {inputs.w2Income > 100000 && inputs.w2Income < 150000 && (
+                        <div className="text-white/40 text-xs pl-4">
+                          (Phased out: AGI ${inputs.w2Income.toLocaleString()} → lose ${((inputs.w2Income - 100000) / 2).toLocaleString()})
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div className="flex justify-between pl-4 text-yellow-400">
+                    <span>Rental Tax Savings</span>
+                    <span className="font-mono">{formatCurrency(rentalTaxBenefit)}</span>
+                  </div>
+                </>
+              )}
+              
+              <div className="flex justify-between border-t border-white/10 pt-2 text-yellow-400">
+                <span className="font-bold">TOTAL TAX SAVINGS</span>
+                <span className="font-mono font-bold">{formatCurrency(totalTaxBenefit)}/yr</span>
+              </div>
             </div>
             <p className="mt-3 text-xs text-white/50">
-              💡 You only benefit from itemizing if your deductions exceed the standard deduction.
-              {totalItemized <= standardDeduction && ' With your numbers, you\'d take the standard deduction.'}
+              💡 Passive losses above income can offset up to $25k of W2 income if AGI &lt; $100k (phases out $100-150k).
             </p>
           </div>
           
