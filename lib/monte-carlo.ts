@@ -844,32 +844,32 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
 
 // Default parameters based on Cambridge, MA scenario (2026 market rates)
 export const defaultParams: SimulationParams = {
-  homePrice: 833000,              // 2BR condo Cambridge (for $750k loan @ 10% down)
-  downPaymentPercent: 10,
-  mortgageRate: 0.0675,           // Current 30yr fixed (March 2026)
-  propertyTaxRate: 0.011,         // Cambridge rate
-  insuranceAnnual: 1440,          // ~$120/mo
+  homePrice: 1198000,             // 3-family Somerville target
+  downPaymentPercent: 5,          // FTHB 5% down
+  mortgageRate: 0.06,             // Current 30yr fixed (March 2026)
+  propertyTaxRate: 0.011,         // Somerville rate
+  insuranceAnnual: 5990,          // ~0.5% of value for multi-family
   
   // Additional costs
   closingCostPercent: 3,          // 3% closing costs
-  hoaMonthly: 500,                // 2BR condo fee estimate
-  maintenanceAnnual: 3000,        // $3k/yr for interior repairs/appliances (condo w/ HOA covers exterior)
+  hoaMonthly: 0,                  // Multi-family = no HOA
+  maintenanceAnnual: 11980,       // ~1% of value for multi-family
   
   // Multi-family units (empty = single-family mode)
   units: [],
   
   houseHack: true,
-  rentalIncome: 1800,             // Cambridge room rental rate
+  rentalIncome: 6000,             // 2 units @ $3k/mo each
   rentalIncomeGrowth: 0.03,       // Match rent growth
   vacancyRate: 0.05,              // 5% vacancy (~18 days/year turnover)
   
-  w2Income: 108000,               // Ayaan's W2
-  federalBracket: 0.22,           // 22% bracket at $108k
+  w2Income: 108722,               // Ayaan's W2
+  federalBracket: 0.24,           // 24% bracket at $108k (corrected)
   stateRate: 0.05,                // MA flat rate
   filingStatus: 'single',         // Single or married (affects std deduction & cap gains)
-  buildingValuePercent: 0.80,     // 80% building, 20% land (Cambridge might be 60/40)
+  buildingValuePercent: 0.80,     // 80% building, 20% land
   
-  currentRent: 1800,              // Ayaan's realistic max rent (not $3,200 market rate)
+  currentRent: 1500,              // Ayaan's current rent
   rentGrowth: 0.03,
   
   // Historical distributions
@@ -887,17 +887,17 @@ export const defaultParams: SimulationParams = {
   sellingCostPercent: 6,       // 5-6% realtor + closing
   capitalGainsTaxRate: 0.15,   // 15% LTCG (above $250k exemption for primary)
   
-  // First-time homebuyer benefits (disabled by default)
+  // First-time homebuyer benefits (enabled for Ayaan's scenario)
   firstTimeHomeBuyer: {
-    enabled: false,
-    noPMI: false,                // ONE Mortgage / MassHousing
+    enabled: true,
+    noPMI: true,                 // ONE Mortgage / MassHousing
     downPaymentAssistance: 0,    // DPA grant amount
     lowerRate: false,
     rateDiscount: 0.005,         // 0.5% rate discount
     taxCredit: 0,                // Annual MCC credit
   },
   
-  years: 15,
+  years: 10,                     // 10 year horizon
   numSimulations: 5000,
   
   // HELOC strategy (disabled by default)
