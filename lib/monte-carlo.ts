@@ -665,8 +665,9 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
         }
       }
       
-      // Total rental deduction = expenses up to income + passive loss allowance
-      rentalExpenseDeduction = Math.min(scheduleEExpenses, scheduleEIncome) + passiveLossAllowance
+      // Rental tax benefit is ONLY the passive loss allowance that offsets W2 income
+      // (The rental income itself is already subtracted from gross costs separately)
+      rentalExpenseDeduction = passiveLossAllowance
       
       // Reduce owner-occupied deductions by rental portion
       // (Interest/tax already split - owner gets remaining portion)

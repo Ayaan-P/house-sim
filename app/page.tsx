@@ -127,8 +127,9 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
     }
   }
   
-  const rentalDeduction = Math.min(scheduleEExpenses, annualRentalIncome) + passiveLossAllowance
-  const rentalTaxBenefit = rentalDeduction * inputs.federalBracket
+  // Rental tax benefit is ONLY the passive loss allowance that offsets W2 income
+  // (The rental income itself is already subtracted from gross costs separately)
+  const rentalTaxBenefit = passiveLossAllowance * inputs.federalBracket
   
   const totalTaxBenefit = ownerTaxBenefit + rentalTaxBenefit
   
