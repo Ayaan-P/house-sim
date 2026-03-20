@@ -249,6 +249,77 @@ ${hasRental ? `### Rental (Schedule E)
     URL.revokeObjectURL(url)
   }
   
+  // Export CSV with formulas for Google Sheets
+  const exportCSV = () => {
+    const csv = `Item,Value,Formula
+INPUTS,,
+Home Price,${inputs.homePrice},
+Down Payment %,${inputs.downPaymentPercent},
+Down Payment,${downPayment},=B2*B3/100
+Loan Amount,${loanAmount},=B2-B4
+Interest Rate %,${inputs.mortgageRate * 100},
+Monthly Rate,${monthlyRate},=B6/12/100
+Term (months),360,
+Monthly P&I,${monthlyPI.toFixed(0)},=B5*B7*(1+B7)^B8/((1+B7)^B8-1)
+Annual P&I,${annualPI.toFixed(0)},=B9*12
+Year 1 Interest,${year1Interest.toFixed(0)},=B5*B6/100
+Property Tax Rate %,${inputs.propertyTaxRate * 100},
+Annual Property Tax,${annualPropertyTax.toFixed(0)},=B2*B12/100
+Insurance,${inputs.insuranceAnnual},
+Maintenance,${inputs.maintenanceAnnual},
+HOA,${inputs.hoaMonthly * 12},
+W2 Income,${inputs.w2Income},
+Federal Bracket %,${inputs.federalBracket * 100},
+State Tax Rate %,${inputs.stateRate * 100},
+Rental Income/mo,${inputs.units.length > 0 ? inputs.units.filter(u => !u.ownerOccupied).reduce((s, u) => s + u.monthlyRent, 0) : inputs.rentalIncome},
+Vacancy Rate %,${(inputs.vacancyRate || 0.05) * 100},
+Annual Rental (net),${annualRentalIncome.toFixed(0)},=B20*12*(1-B21/100)
+,,
+OWNER PORTION (${(ownerPortion * 100).toFixed(0)}%),,
+Owner %,${(ownerPortion * 100).toFixed(2)},
+Owner Interest,${(year1Interest * ownerPortion).toFixed(0)},=B11*B25/100
+Owner Property Tax,${(annualPropertyTax * ownerPortion).toFixed(0)},=B13*B25/100
+State Income Tax,${(inputs.w2Income * inputs.stateRate).toFixed(0)},=B17*B19/100
+SALT (capped $40k),${saltDeduction.toFixed(0)},=MIN(B27+B28;40000)
+Mortgage Int Deduction,${mortgageInterestDeduction.toFixed(0)},=B26
+Total Itemized,${totalItemized.toFixed(0)},=B30+B29
+Standard Deduction,${standardDeduction},
+Benefit Over Standard,${Math.max(0, totalItemized - standardDeduction).toFixed(0)},=MAX(0;B31-B32)
+Owner Tax Savings,${ownerTaxBenefit.toFixed(0)},=B33*B18/100
+,,
+RENTAL PORTION (${(rentalPortion * 100).toFixed(0)}%),,
+Rental %,${(rentalPortion * 100).toFixed(2)},
+Rental Interest,${(year1Interest * rentalPortion).toFixed(0)},=B11*B37/100
+Rental Property Tax,${(annualPropertyTax * rentalPortion).toFixed(0)},=B13*B37/100
+Rental Insurance,${(annualInsurance * rentalPortion).toFixed(0)},=B14*B37/100
+Rental Maintenance,${(annualMaintenance * rentalPortion).toFixed(0)},=B15*B37/100
+Building Value (80%),${(inputs.homePrice * 0.8).toFixed(0)},=B2*0.8
+Rental Building,${(inputs.homePrice * 0.8 * rentalPortion).toFixed(0)},=B42*B37/100
+Depreciation (27.5yr),${annualDepreciation.toFixed(0)},=B43/27.5
+Total Sch E Expenses,${scheduleEExpenses.toFixed(0)},=B38+B39+B40+B41+B44
+Passive Loss,${passiveLoss.toFixed(0)},=MAX(0;B45-B22)
+Max Allowance,25000,
+AGI Phaseout,${((inputs.w2Income - 100000) / 2).toFixed(0)},=MAX(0;(B17-100000)/2)
+Allowance,${passiveLossAllowance.toFixed(0)},=MIN(B46;MAX(0;B47-B48))
+Rental Tax Savings,${rentalTaxBenefit.toFixed(0)},=B49*B18/100
+,,
+TOTALS,,
+Total Tax Savings,${totalTaxBenefit.toFixed(0)},=B34+B50
+Gross Annual Cost,${totalAnnualCostBuy.toFixed(0)},=B10+B13+B14+B15+B16
+Net Annual Cost,${netCostBuy.toFixed(0)},=B53-B22-B52
+Net Monthly Cost,${(netCostBuy / 12).toFixed(0)},=B54/12
+`
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `house-calc-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+  
   // Share function - generates URL with ALL parameters (only non-default values)
   const [copied, setCopied] = useState(false)
   const shareUrl = () => {
@@ -367,8 +438,16 @@ ${hasRental ? `### Rental (Schedule E)
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl border border-blue-500 transition-colors flex items-center gap-2"
           title="Export calculations as Markdown"
         >
-          <span>📥</span>
-          <span className="hidden sm:inline">Export</span>
+          <span>📄</span>
+          <span className="hidden sm:inline">MD</span>
+        </button>
+        <button
+          onClick={exportCSV}
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl border border-green-500 transition-colors flex items-center gap-2"
+          title="Export as CSV with formulas for Google Sheets"
+        >
+          <span>📊</span>
+          <span className="hidden sm:inline">Sheets</span>
         </button>
       </div>
       
