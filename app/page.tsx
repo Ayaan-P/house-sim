@@ -70,9 +70,17 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
   const annualHOA = inputs.hoaMonthly * 12
   const annualPMI = (loanAmount / inputs.homePrice) > 0.8 ? loanAmount * 0.005 : 0
   
-  // Year 1 interest (approximately 85% of payment is interest in year 1)
-  const year1Interest = annualPI * 0.85
-  const year1Principal = annualPI - year1Interest
+  // Year 1 interest - calculate actual amortization for first 12 payments
+  let year1Interest = 0
+  let year1Principal = 0
+  let balance = loanAmount
+  for (let i = 0; i < 12; i++) {
+    const monthInterest = balance * monthlyRate
+    const monthPrincipal = monthlyPI - monthInterest
+    year1Interest += monthInterest
+    year1Principal += monthPrincipal
+    balance -= monthPrincipal
+  }
   
   // Rental income (if applicable)
   const hasRental = inputs.units.length > 0 || inputs.houseHack
