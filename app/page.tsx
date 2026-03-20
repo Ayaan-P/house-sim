@@ -45,6 +45,374 @@ function formatPercent(n: number): string {
   return `${(n * 100).toFixed(1)}%`
 }
 
+// Math Explained Component - Shows all calculations with user's values
+function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simResults: SimulationSummary | null }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  
+  if (!simResults) return null
+  
+  // Calculate all the values we'll show
+  const downPayment = inputs.homePrice * (inputs.downPaymentPercent / 100)
+  const loanAmount = inputs.homePrice - downPayment
+  const closingCosts = inputs.homePrice * (inputs.closingCostPercent / 100)
+  const totalUpfront = downPayment + closingCosts
+  
+  // Monthly mortgage payment (P&I)
+  const monthlyRate = inputs.mortgageRate / 12
+  const numPayments = 360
+  const monthlyPI = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1)
+  const annualPI = monthlyPI * 12
+  
+  // Annual costs
+  const annualPropertyTax = inputs.homePrice * inputs.propertyTaxRate
+  const annualInsurance = inputs.insuranceAnnual
+  const annualMaintenance = inputs.homePrice * inputs.maintenancePercent
+  const annualHOA = inputs.hoaMonthly * 12
+  const annualPMI = (loanAmount / inputs.homePrice) > 0.8 ? loanAmount * 0.005 : 0
+  
+  // Year 1 interest (approximately 85% of payment is interest in year 1)
+  const year1Interest = annualPI * 0.85
+  const year1Principal = annualPI - year1Interest
+  
+  // Tax deductions
+  const standardDeduction = inputs.filingStatus === 'married' ? 31000 : 15500
+  const saltDeduction = Math.min(annualPropertyTax + (inputs.w2Income * inputs.stateRate), 40000)
+  const mortgageInterestDeduction = Math.min(year1Interest, loanAmount <= 750000 ? year1Interest : year1Interest * (750000 / loanAmount))
+  const totalItemized = mortgageInterestDeduction + saltDeduction
+  const taxBenefit = totalItemized > standardDeduction ? (totalItemized - standardDeduction) * inputs.federalBracket : 0
+  
+  // Rental income (if applicable)
+  const hasRental = inputs.units.length > 0 || inputs.houseHack
+  const monthlyRentalIncome = inputs.units.length > 0 
+    ? inputs.units.filter(u => !u.ownerOccupied).reduce((sum, u) => sum + u.monthlyRent, 0)
+    : inputs.houseHack ? inputs.rentalIncome : 0
+  const annualRentalIncome = monthlyRentalIncome * 12 * (1 - (inputs.vacancyRate || 0))
+  
+  // Total cost of buying (Year 1)
+  const totalAnnualCostBuy = annualPI + annualPropertyTax + annualInsurance + annualMaintenance + annualHOA + annualPMI
+  const netCostBuy = totalAnnualCostBuy - annualRentalIncome - taxBenefit
+  
+  // Rent scenario
+  const annualRent = inputs.currentRent * 12
+  const monthlySavings = (netCostBuy - annualRent) / 12
+  
+  // Projected values (Year N at median)
+  const finalYear = simResults.yearlyStats[simResults.yearlyStats.length - 1]
+  
+  return (
+    <Section title="🧮 How The Math Works">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full text-left flex items-center justify-between p-4 bg-white/[0.02] rounded-xl border border-white/[0.08] hover:border-white/20 transition-colors"
+      >
+        <span className="text-white/70">
+          {isExpanded ? 'Click to collapse' : 'Click to see step-by-step calculations with your numbers'}
+        </span>
+        <span className={`transform transition-transform text-white/50 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+      </button>
+      
+      {isExpanded && (
+        <div className="mt-4 space-y-6 text-sm">
+          
+          {/* Step 1: Upfront Costs */}
+          <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl">
+            <h4 className="text-blue-400 font-bold mb-3">Step 1: What You Pay Upfront</h4>
+            <div className="space-y-2 text-white/80">
+              <div className="flex justify-between">
+                <span>Home Price</span>
+                <span className="font-mono">{formatCurrency(inputs.homePrice)}</span>
+              </div>
+              <div className="flex justify-between pl-4 text-white/60">
+                <span>Down Payment ({inputs.downPaymentPercent}%)</span>
+                <span className="font-mono">− {formatCurrency(downPayment)}</span>
+              </div>
+              <div className="flex justify-between border-t border-white/10 pt-2">
+                <span>Loan Amount</span>
+                <span className="font-mono font-bold">{formatCurrency(loanAmount)}</span>
+              </div>
+              <div className="flex justify-between pt-2">
+                <span>Closing Costs ({inputs.closingCostPercent}%)</span>
+                <span className="font-mono">{formatCurrency(closingCosts)}</span>
+              </div>
+              <div className="flex justify-between border-t border-white/10 pt-2 text-blue-400">
+                <span className="font-bold">Total Cash Needed</span>
+                <span className="font-mono font-bold">{formatCurrency(totalUpfront)}</span>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-white/50">
+              💡 This is the capital you need to buy. If renting, this money goes into the stock market instead.
+            </p>
+          </div>
+          
+          {/* Step 2: Monthly Mortgage */}
+          <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-xl">
+            <h4 className="text-purple-400 font-bold mb-3">Step 2: Your Mortgage Payment</h4>
+            <div className="space-y-2 text-white/80">
+              <div className="text-white/50 text-xs mb-2">
+                Formula: P = L × [r(1+r)ⁿ] / [(1+r)ⁿ - 1]
+                <br />
+                Where L = loan, r = monthly rate, n = payments
+              </div>
+              <div className="flex justify-between">
+                <span>Loan Amount (L)</span>
+                <span className="font-mono">{formatCurrency(loanAmount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Monthly Rate (r = {(inputs.mortgageRate * 100).toFixed(2)}% ÷ 12)</span>
+                <span className="font-mono">{(monthlyRate * 100).toFixed(4)}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Number of Payments (n = 30 years × 12)</span>
+                <span className="font-mono">360</span>
+              </div>
+              <div className="flex justify-between border-t border-white/10 pt-2 text-purple-400">
+                <span className="font-bold">Monthly P&I Payment</span>
+                <span className="font-mono font-bold">{formatCurrency(monthlyPI)}/mo</span>
+              </div>
+              <div className="flex justify-between text-white/60">
+                <span>Annual P&I</span>
+                <span className="font-mono">{formatCurrency(annualPI)}/yr</span>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-white/50">
+              💡 In Year 1, ~{(0.85 * 100).toFixed(0)}% ({formatCurrency(year1Interest)}) goes to interest, only ~{(0.15 * 100).toFixed(0)}% ({formatCurrency(year1Principal)}) builds equity.
+            </p>
+          </div>
+          
+          {/* Step 3: Total Annual Costs */}
+          <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl">
+            <h4 className="text-red-400 font-bold mb-3">Step 3: Total Cost of Owning (Year 1)</h4>
+            <div className="space-y-2 text-white/80">
+              <div className="flex justify-between">
+                <span>Mortgage (P&I)</span>
+                <span className="font-mono">{formatCurrency(annualPI)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Property Tax ({(inputs.propertyTaxRate * 100).toFixed(2)}%)</span>
+                <span className="font-mono">{formatCurrency(annualPropertyTax)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Insurance</span>
+                <span className="font-mono">{formatCurrency(annualInsurance)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Maintenance ({(inputs.maintenancePercent * 100).toFixed(1)}%)</span>
+                <span className="font-mono">{formatCurrency(annualMaintenance)}</span>
+              </div>
+              {inputs.hoaMonthly > 0 && (
+                <div className="flex justify-between">
+                  <span>HOA ({formatCurrency(inputs.hoaMonthly)}/mo)</span>
+                  <span className="font-mono">{formatCurrency(annualHOA)}</span>
+                </div>
+              )}
+              {annualPMI > 0 && (
+                <div className="flex justify-between">
+                  <span>PMI (down &lt; 20%)</span>
+                  <span className="font-mono">{formatCurrency(annualPMI)}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-white/10 pt-2">
+                <span className="font-bold">Gross Annual Cost</span>
+                <span className="font-mono font-bold">{formatCurrency(totalAnnualCostBuy)}</span>
+              </div>
+              
+              {/* Deductions */}
+              {hasRental && (
+                <div className="flex justify-between text-green-400">
+                  <span>− Rental Income (after {(inputs.vacancyRate * 100).toFixed(0)}% vacancy)</span>
+                  <span className="font-mono">−{formatCurrency(annualRentalIncome)}</span>
+                </div>
+              )}
+              {taxBenefit > 0 && (
+                <div className="flex justify-between text-green-400">
+                  <span>− Tax Savings (itemized − standard)</span>
+                  <span className="font-mono">−{formatCurrency(taxBenefit)}</span>
+                </div>
+              )}
+              
+              <div className="flex justify-between border-t border-white/10 pt-2 text-red-400">
+                <span className="font-bold">Net Annual Cost (Buying)</span>
+                <span className="font-mono font-bold">{formatCurrency(netCostBuy)}</span>
+              </div>
+              <div className="flex justify-between text-white/60">
+                <span>Monthly</span>
+                <span className="font-mono">{formatCurrency(netCostBuy / 12)}/mo</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Step 4: Tax Math */}
+          <div className="p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
+            <h4 className="text-yellow-400 font-bold mb-3">Step 4: Tax Deductions Explained</h4>
+            <div className="space-y-2 text-white/80">
+              <div className="flex justify-between">
+                <span>Standard Deduction ({inputs.filingStatus})</span>
+                <span className="font-mono">{formatCurrency(standardDeduction)}</span>
+              </div>
+              <div className="text-white/50 text-xs my-2">vs. Itemized Deductions:</div>
+              <div className="flex justify-between pl-4">
+                <span>Mortgage Interest (Year 1)</span>
+                <span className="font-mono">{formatCurrency(mortgageInterestDeduction)}</span>
+              </div>
+              <div className="flex justify-between pl-4">
+                <span>SALT (capped at $40k)</span>
+                <span className="font-mono">{formatCurrency(saltDeduction)}</span>
+              </div>
+              <div className="flex justify-between pl-4 border-t border-white/10 pt-2">
+                <span>Total Itemized</span>
+                <span className="font-mono">{formatCurrency(totalItemized)}</span>
+              </div>
+              <div className="flex justify-between pt-2">
+                <span>Benefit Over Standard ({totalItemized > standardDeduction ? '+' : ''}{formatCurrency(totalItemized - standardDeduction)})</span>
+                <span className={`font-mono ${totalItemized > standardDeduction ? 'text-green-400' : 'text-red-400'}`}>
+                  {totalItemized > standardDeduction ? '✓ Itemize' : '✗ Take Standard'}
+                </span>
+              </div>
+              {taxBenefit > 0 && (
+                <div className="flex justify-between text-yellow-400 border-t border-white/10 pt-2">
+                  <span className="font-bold">Tax Savings (at {(inputs.federalBracket * 100).toFixed(0)}% bracket)</span>
+                  <span className="font-mono font-bold">{formatCurrency(taxBenefit)}/yr</span>
+                </div>
+              )}
+            </div>
+            <p className="mt-3 text-xs text-white/50">
+              💡 You only benefit from itemizing if your deductions exceed the standard deduction.
+              {totalItemized <= standardDeduction && ' With your numbers, you\'d take the standard deduction.'}
+            </p>
+          </div>
+          
+          {/* Step 5: Rent Comparison */}
+          <div className="p-4 bg-emerald-900/20 border border-emerald-500/30 rounded-xl">
+            <h4 className="text-emerald-400 font-bold mb-3">Step 5: Rent + Invest Alternative</h4>
+            <div className="space-y-2 text-white/80">
+              <div className="flex justify-between">
+                <span>Current Rent</span>
+                <span className="font-mono">{formatCurrency(inputs.currentRent)}/mo</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Annual Rent</span>
+                <span className="font-mono">{formatCurrency(annualRent)}/yr</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Rent Growth Rate</span>
+                <span className="font-mono">{(inputs.rentGrowth * 100).toFixed(1)}%/yr</span>
+              </div>
+              <div className="flex justify-between border-t border-white/10 pt-2">
+                <span>Buy costs {netCostBuy > annualRent ? 'more' : 'less'} by</span>
+                <span className={`font-mono ${netCostBuy > annualRent ? 'text-red-400' : 'text-green-400'}`}>
+                  {formatCurrency(Math.abs(netCostBuy - annualRent))}/yr
+                </span>
+              </div>
+              <div className="flex justify-between text-white/60">
+                <span>Monthly difference</span>
+                <span className="font-mono">{formatCurrency(Math.abs(monthlySavings))}/mo</span>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-white/50">
+              💡 If renting is cheaper, you invest the {formatCurrency(totalUpfront)} down payment PLUS {formatCurrency(Math.abs(monthlySavings))}/mo savings into stocks.
+              {netCostBuy < annualRent && ` If buying is cheaper, YOU invest the ${formatCurrency(Math.abs(monthlySavings))}/mo savings.`}
+            </p>
+          </div>
+          
+          {/* Step 6: Monte Carlo */}
+          <div className="p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-xl">
+            <h4 className="text-cyan-400 font-bold mb-3">Step 6: The Monte Carlo Magic</h4>
+            <div className="space-y-3 text-white/80">
+              <p>
+                We run <span className="text-cyan-400 font-bold">{inputs.numSimulations.toLocaleString()}</span> simulations. 
+                In each one, we randomly sample:
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-black/30 rounded-lg">
+                  <div className="text-white/60 text-xs mb-1">Home Appreciation</div>
+                  <div className="font-mono">
+                    μ = {(inputs.appreciationMean * 100).toFixed(1)}%/yr
+                    <br />
+                    σ = {(inputs.appreciationStdDev * 100).toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-white/40 mt-1">
+                    Range: roughly {((inputs.appreciationMean - 2*inputs.appreciationStdDev) * 100).toFixed(0)}% to +{((inputs.appreciationMean + 2*inputs.appreciationStdDev) * 100).toFixed(0)}%
+                  </div>
+                </div>
+                <div className="p-3 bg-black/30 rounded-lg">
+                  <div className="text-white/60 text-xs mb-1">Stock Returns</div>
+                  <div className="font-mono">
+                    μ = {(inputs.stockReturnMean * 100).toFixed(1)}%/yr
+                    <br />
+                    σ = {(inputs.stockReturnStdDev * 100).toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-white/40 mt-1">
+                    Range: roughly {((inputs.stockReturnMean - 2*inputs.stockReturnStdDev) * 100).toFixed(0)}% to +{((inputs.stockReturnMean + 2*inputs.stockReturnStdDev) * 100).toFixed(0)}%
+                  </div>
+                </div>
+              </div>
+              <p className="text-white/60 text-xs">
+                Each year, we draw random returns from normal distributions and compound them. 
+                After {inputs.years} years, we compare: <span className="text-blue-400">Home Equity</span> vs <span className="text-green-400">Stock Portfolio</span>.
+              </p>
+            </div>
+          </div>
+          
+          {/* Step 7: Final Comparison */}
+          <div className="p-4 bg-gradient-to-br from-green-900/30 to-blue-900/30 border border-white/20 rounded-xl">
+            <h4 className="text-white font-bold mb-3">Step 7: Final Wealth Comparison (Year {inputs.years})</h4>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <div className="text-blue-400 font-bold mb-2">🏠 If You Buy</div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Home Value (P50)</span>
+                    <span className="font-mono">{formatCurrency(finalYear?.wealthBuy.p50 || 0)}</span>
+                  </div>
+                  <div className="text-xs text-white/40 pl-2">
+                    (equity after selling costs, mortgage payoff, taxes)
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="text-green-400 font-bold mb-2">📈 If You Rent + Invest</div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Portfolio Value (P50)</span>
+                    <span className="font-mono">{formatCurrency(finalYear?.wealthRent.p50 || 0)}</span>
+                  </div>
+                  <div className="text-xs text-white/40 pl-2">
+                    (down payment + monthly savings, compounded)
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-white/20 text-center">
+              <div className="text-white/60 mb-1">Median Outcome (P50)</div>
+              <div className={`text-2xl font-bold ${(finalYear?.delta.p50 || 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {(finalYear?.delta.p50 || 0) > 0 ? 'Buying wins by ' : 'Renting wins by '}
+                {formatCurrency(Math.abs(finalYear?.delta.p50 || 0))}
+              </div>
+              <div className="text-white/50 text-sm mt-1">
+                Buy wins in {(simResults.finalStats.buyWinsProbability * 100).toFixed(0)}% of {inputs.numSimulations.toLocaleString()} simulations
+              </div>
+            </div>
+          </div>
+          
+          {/* Disclaimer */}
+          <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl text-xs text-white/40">
+            <strong className="text-white/60">⚠️ Important Caveats:</strong>
+            <ul className="mt-2 space-y-1 list-disc list-inside">
+              <li>This assumes you stay the full {inputs.years} years. Selling early typically favors renting.</li>
+              <li>Real returns have "fat tails" — extreme outcomes (crashes, booms) happen more than normal distributions suggest.</li>
+              <li>Housing and stocks are modeled with {((inputs.marketCorrelation || 0.3) * 100).toFixed(0)}% correlation — they often move together in crises.</li>
+              <li>This ignores lifestyle factors: stability, ability to renovate, forced savings discipline, etc.</li>
+              <li>Tax laws change. This uses 2026 rules (SALT cap, mortgage interest limits).</li>
+              <li>This is not financial advice. It's math. Your situation may differ.</li>
+            </ul>
+          </div>
+          
+        </div>
+      )}
+    </Section>
+  )
+}
+
 function HousePageInner() {
   const searchParams = useSearchParams()
   const [inputs, setInputs] = useState<SimulationParams>(defaultParams)
@@ -1044,6 +1412,9 @@ function HousePageInner() {
               </div>
             )}
           </Section>
+          
+          {/* Math Explained Section */}
+          <MathExplained inputs={inputs} simResults={simResults} />
         </>
       )}
       
