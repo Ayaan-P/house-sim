@@ -736,6 +736,10 @@ function HousePageInner() {
   const [isRunningSensitivity, setIsRunningSensitivity] = useState(false)
   const [isRunningBreakEven, setIsRunningBreakEven] = useState(false)
   
+  // Collapsible state (must be before URL parsing useEffect)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showStrategies, setShowStrategies] = useState(false)
+  
   // Parse URL params - comprehensive list of all SimulationParams fields
   useEffect(() => {
     const p = (key: string) => searchParams.get(key)
@@ -963,10 +967,6 @@ function HousePageInner() {
     </div>
   )
 
-  // Collapsible state
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [showStrategies, setShowStrategies] = useState(false)
-  
   // Calculate rental summary for display
   const rentalSummary = inputs.units.length > 0 
     ? getUnitSummary(inputs.units)
