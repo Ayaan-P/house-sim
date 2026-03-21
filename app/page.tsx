@@ -539,6 +539,17 @@ Primary Residence Exemption,$250k/$500k,Section 121
       if (!inputs.heloc.deployToStocks) params.set('helocnostocks', '1')
     }
     
+    // Exit Strategy
+    if (inputs.exitStrategy && inputs.exitStrategy !== 'sell') {
+      params.set('exit', inputs.exitStrategy)
+    }
+    
+    // Tax Strategies
+    if (inputs.taxStrategies?.costSegregation?.enabled) params.set('costseg', '1')
+    if (inputs.taxStrategies?.qbi?.enabled) params.set('qbi', '1')
+    // Note: 1031 is now part of exitStrategy, but keep for backwards compat
+    if (inputs.taxStrategies?.exchange1031?.enabled) params.set('1031', '1')
+    
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
     navigator.clipboard.writeText(url)
     setCopied(true)
@@ -1044,6 +1055,30 @@ function HousePageInner() {
           maxLTV: pPct('helocltv') || 0.80,
           rate: pPct('helocrate') || 0.08,
           deployToStocks: !pBool('helocnostocks'),
+        }
+      }
+      
+      // Exit Strategy
+      const exitParam = p('exit')
+      if (exitParam && ['sell', 'hold', '1031', 'remote'].includes(exitParam)) {
+        updates.exitStrategy = exitParam as 'sell' | 'hold' | '1031' | 'remote'
+      }
+      
+      // Tax Strategies
+      if (pBool('costseg') || pBool('qbi') || pBool('1031')) {
+        updates.taxStrategies = {
+          costSegregation: {
+            enabled: pBool('costseg'),
+            shortLifePercent: 0.20,
+            year1BonusDepreciation: 1.0,
+          },
+          qbi: {
+            enabled: pBool('qbi'),
+            qualifiesAsBusiness: pBool('qbi'),
+          },
+          exchange1031: {
+            enabled: pBool('1031'),
+          },
         }
       }
       
