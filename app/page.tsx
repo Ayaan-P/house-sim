@@ -558,7 +558,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
   }
   
   return (
-    <Section title="🧮 How The Math Works">
+    <Section title="How The Math Works">
       <div className="flex gap-2">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -582,7 +582,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl border border-blue-500 transition-colors flex items-center gap-2"
           title="Export calculations as Markdown"
         >
-          <span>📄</span>
+          <span>MD</span>
           <span className="hidden sm:inline">MD</span>
         </button>
         <button
@@ -590,7 +590,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
           className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl border border-green-500 transition-colors flex items-center gap-2"
           title="Export as CSV with formulas for Google Sheets"
         >
-          <span>📊</span>
+          <span>CSV</span>
           <span className="hidden sm:inline">Sheets</span>
         </button>
       </div>
@@ -1464,68 +1464,44 @@ function HousePageInner() {
           </div>
         )}
         
-        {/* Run Button */}
-        <button 
-          onClick={runSim}
-          disabled={isRunning}
-          className="w-full py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 
-                     disabled:from-gray-700 disabled:to-gray-600 disabled:cursor-not-allowed
-                     rounded-xl text-white font-bold text-base sm:text-lg shadow-lg shadow-blue-900/30
-                     transition-all duration-200 hover:shadow-blue-900/50
-                     flex items-center justify-center gap-2 sm:gap-3"
-        >
-          {isRunning ? (
-            <>
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Running {inputs.numSimulations.toLocaleString()} simulations...
-            </>
-          ) : (
-            <>▶ Run Simulation</>
-          )}
-        </button>
-      </div>
-      
-      {/* ===== ADVANCED SETTINGS (Collapsible) ===== */}
-      <div className="mb-6">
-        <button
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-2 text-white/50 hover:text-white/70 text-sm transition-colors"
-        >
-          <span className={`transform transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
-          Advanced Settings
-        </button>
-        
-        {showAdvanced && (
-          <div className="mt-4 p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              <InputField label="HOA/mo" value={inputs.hoaMonthly} onChange={(v: number) => update('hoaMonthly', v)} prefix="$" />
-              <InputField label="Maintenance/yr" value={inputs.maintenanceAnnual} onChange={(v: number) => update('maintenanceAnnual', v)} prefix="$" />
-              <InputField label="Closing %" value={inputs.closingCostPercent} onChange={(v: number) => update('closingCostPercent', v)} suffix="%" />
-              <InputField label="W2 Income" value={inputs.w2Income} onChange={(v: number) => update('w2Income', v)} prefix="$" />
-              <InputField label="Fed Tax" value={(inputs.federalBracket * 100).toFixed(0)} onChange={(v: number) => update('federalBracket', v / 100)} suffix="%" />
-              <InputField label="State Tax" value={(inputs.stateRate * 100).toFixed(0)} onChange={(v: number) => update('stateRate', v / 100)} suffix="%" />
-              <InputField label="Appreciation μ" value={(inputs.appreciationMean * 100).toFixed(1)} onChange={(v: number) => update('appreciationMean', v / 100)} suffix="%" />
-              <InputField label="Appreciation σ" value={(inputs.appreciationStdDev * 100).toFixed(1)} onChange={(v: number) => update('appreciationStdDev', v / 100)} suffix="%" />
-              <InputField label="Stock Return μ" value={(inputs.stockReturnMean * 100).toFixed(1)} onChange={(v: number) => update('stockReturnMean', v / 100)} suffix="%" />
-              <InputField label="Stock Return σ" value={(inputs.stockReturnStdDev * 100).toFixed(1)} onChange={(v: number) => update('stockReturnStdDev', v / 100)} suffix="%" />
-              <InputField label="Rent Growth" value={(inputs.rentGrowth * 100).toFixed(0)} onChange={(v: number) => update('rentGrowth', v / 100)} suffix="%" />
+        {/* ===== ADVANCED SETTINGS (Collapsible) ===== */}
+        <div className="mb-4">
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-2 text-white/50 hover:text-white/70 text-sm transition-colors"
+          >
+            <span className={`transform transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
+            Advanced Settings
+          </button>
+          
+          {showAdvanced && (
+            <div className="mt-4 p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <InputField label="HOA/mo" value={inputs.hoaMonthly} onChange={(v: number) => update('hoaMonthly', v)} prefix="$" />
+                <InputField label="Maintenance/yr" value={inputs.maintenanceAnnual} onChange={(v: number) => update('maintenanceAnnual', v)} prefix="$" />
+                <InputField label="Closing %" value={inputs.closingCostPercent} onChange={(v: number) => update('closingCostPercent', v)} suffix="%" />
+                <InputField label="W2 Income" value={inputs.w2Income} onChange={(v: number) => update('w2Income', v)} prefix="$" />
+                <InputField label="Fed Tax" value={(inputs.federalBracket * 100).toFixed(0)} onChange={(v: number) => update('federalBracket', v / 100)} suffix="%" />
+                <InputField label="State Tax" value={(inputs.stateRate * 100).toFixed(0)} onChange={(v: number) => update('stateRate', v / 100)} suffix="%" />
+                <InputField label="Appreciation μ" value={(inputs.appreciationMean * 100).toFixed(1)} onChange={(v: number) => update('appreciationMean', v / 100)} suffix="%" />
+                <InputField label="Appreciation σ" value={(inputs.appreciationStdDev * 100).toFixed(1)} onChange={(v: number) => update('appreciationStdDev', v / 100)} suffix="%" />
+                <InputField label="Stock Return μ" value={(inputs.stockReturnMean * 100).toFixed(1)} onChange={(v: number) => update('stockReturnMean', v / 100)} suffix="%" />
+                <InputField label="Stock Return σ" value={(inputs.stockReturnStdDev * 100).toFixed(1)} onChange={(v: number) => update('stockReturnStdDev', v / 100)} suffix="%" />
+                <InputField label="Rent Growth" value={(inputs.rentGrowth * 100).toFixed(0)} onChange={(v: number) => update('rentGrowth', v / 100)} suffix="%" />
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       
-      {/* ===== STRATEGIES (Collapsible) ===== */}
-      <div className="mb-6">
-        <button
-          onClick={() => setShowStrategies(!showStrategies)}
-          className="flex items-center gap-2 text-white/50 hover:text-white/70 text-sm transition-colors"
-        >
-          <span className={`transform transition-transform ${showStrategies ? 'rotate-90' : ''}`}>▶</span>
-          FTHB Benefits / HELOC Strategy / Scenarios
-        </button>
+        {/* ===== STRATEGIES (Collapsible) ===== */}
+        <div className="mb-4">
+          <button
+            onClick={() => setShowStrategies(!showStrategies)}
+            className="flex items-center gap-2 text-white/50 hover:text-white/70 text-sm transition-colors"
+          >
+            <span className={`transform transition-transform ${showStrategies ? 'rotate-90' : ''}`}>▶</span>
+            Strategies / Scenarios
+          </button>
         
         {showStrategies && (
           <div className="mt-4 space-y-4">
@@ -1684,6 +1660,30 @@ function HousePageInner() {
             </div>
           </div>
         )}
+        </div>
+        
+        {/* Run Button */}
+        <button 
+          onClick={runSim}
+          disabled={isRunning}
+          className="w-full py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 
+                     disabled:from-gray-700 disabled:to-gray-600 disabled:cursor-not-allowed
+                     rounded-xl text-white font-bold text-base sm:text-lg shadow-lg shadow-blue-900/30
+                     transition-all duration-200 hover:shadow-blue-900/50
+                     flex items-center justify-center gap-2 sm:gap-3"
+        >
+          {isRunning ? (
+            <>
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Running {inputs.numSimulations.toLocaleString()} simulations...
+            </>
+          ) : (
+            <>Run Simulation</>
+          )}
+        </button>
       </div>
       
       {/* Results */}
