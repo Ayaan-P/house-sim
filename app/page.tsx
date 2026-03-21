@@ -1161,16 +1161,17 @@ function HousePageInner() {
     }))
   }, [simResults])
   
-  const InputField = ({ label, value, onChange, suffix = '', hint = '', prefix = '' }: {
+  const InputField = ({ label, value, onChange, suffix = '', hint = '', prefix = '', tooltip = '' }: {
     label: string
     value: number | string
     onChange: (v: number) => void
     suffix?: string
     hint?: string
     prefix?: string
+    tooltip?: string
   }) => (
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-white/70 mb-1.5">
+    <div className="mb-4" title={tooltip}>
+      <label className={`block text-sm font-medium text-white/70 mb-1.5 ${tooltip ? 'cursor-help' : ''}`}>
         {label}
         {hint && <span className="text-white/40 font-normal ml-1">({hint})</span>}
       </label>
@@ -1249,8 +1250,8 @@ function HousePageInner() {
       >
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Price */}
-          <div>
-            <label className="block text-xs text-white/50 mb-1">Price</label>
+          <div title="Purchase price of the property">
+            <label className="block text-xs text-white/50 mb-1 cursor-help">Price</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">$</span>
               <input
@@ -1267,8 +1268,8 @@ function HousePageInner() {
           </div>
           
           {/* Down Payment */}
-          <div>
-            <label className="block text-xs text-white/50 mb-1">Down</label>
+          <div title="Down payment percentage. FTHB programs allow 3-5%.">
+            <label className="block text-xs text-white/50 mb-1 cursor-help">Down</label>
             <div className="relative">
               <input
                 type="text"
@@ -1285,8 +1286,8 @@ function HousePageInner() {
           </div>
           
           {/* Rate */}
-          <div>
-            <label className="block text-xs text-white/50 mb-1">Rate</label>
+          <div title="Mortgage interest rate (30-year fixed)">
+            <label className="block text-xs text-white/50 mb-1 cursor-help">Rate</label>
             <div className="relative">
               <input
                 type="text"
@@ -1303,8 +1304,8 @@ function HousePageInner() {
           </div>
           
           {/* Your Rent */}
-          <div>
-            <label className="block text-xs text-white/50 mb-1">Your Rent</label>
+          <div title="What you currently pay in rent. Used to calculate opportunity cost.">
+            <label className="block text-xs text-white/50 mb-1 cursor-help">Your Rent</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">$</span>
               <input
@@ -1321,8 +1322,8 @@ function HousePageInner() {
           </div>
           
           {/* Years */}
-          <div>
-            <label className="block text-xs text-white/50 mb-1">Years</label>
+          <div title="How long you plan to hold the property. Longer = more likely buying wins.">
+            <label className="block text-xs text-white/50 mb-1 cursor-help">Years</label>
             <div className="relative">
               <input
                 type="text"
@@ -1339,8 +1340,8 @@ function HousePageInner() {
           </div>
           
           {/* Closing Month */}
-          <div>
-            <label className="block text-xs text-white/50 mb-1">Close</label>
+          <div title="Month you plan to close. Year 1 costs/income are prorated.">
+            <label className="block text-xs text-white/50 mb-1 cursor-help">Close</label>
             <select
               value={inputs.closingMonth || 1}
               onChange={(e) => update('closingMonth', parseInt(e.target.value))}
@@ -1477,17 +1478,17 @@ function HousePageInner() {
           {showAdvanced && (
             <div className="mt-4 p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <InputField label="HOA/mo" value={inputs.hoaMonthly} onChange={(v: number) => update('hoaMonthly', v)} prefix="$" />
-                <InputField label="Maintenance/yr" value={inputs.maintenanceAnnual} onChange={(v: number) => update('maintenanceAnnual', v)} prefix="$" />
-                <InputField label="Closing %" value={inputs.closingCostPercent} onChange={(v: number) => update('closingCostPercent', v)} suffix="%" />
-                <InputField label="W2 Income" value={inputs.w2Income} onChange={(v: number) => update('w2Income', v)} prefix="$" />
-                <InputField label="Fed Tax" value={(inputs.federalBracket * 100).toFixed(0)} onChange={(v: number) => update('federalBracket', v / 100)} suffix="%" />
-                <InputField label="State Tax" value={(inputs.stateRate * 100).toFixed(0)} onChange={(v: number) => update('stateRate', v / 100)} suffix="%" />
-                <InputField label="Appreciation μ" value={(inputs.appreciationMean * 100).toFixed(1)} onChange={(v: number) => update('appreciationMean', v / 100)} suffix="%" />
-                <InputField label="Appreciation σ" value={(inputs.appreciationStdDev * 100).toFixed(1)} onChange={(v: number) => update('appreciationStdDev', v / 100)} suffix="%" />
-                <InputField label="Stock Return μ" value={(inputs.stockReturnMean * 100).toFixed(1)} onChange={(v: number) => update('stockReturnMean', v / 100)} suffix="%" />
-                <InputField label="Stock Return σ" value={(inputs.stockReturnStdDev * 100).toFixed(1)} onChange={(v: number) => update('stockReturnStdDev', v / 100)} suffix="%" />
-                <InputField label="Rent Growth" value={(inputs.rentGrowth * 100).toFixed(0)} onChange={(v: number) => update('rentGrowth', v / 100)} suffix="%" />
+                <InputField label="HOA/mo" value={inputs.hoaMonthly} onChange={(v: number) => update('hoaMonthly', v)} prefix="$" tooltip="Monthly HOA dues. Multi-family usually $0." />
+                <InputField label="Maintenance/yr" value={inputs.maintenanceAnnual} onChange={(v: number) => update('maintenanceAnnual', v)} prefix="$" tooltip="Annual repairs/upkeep. ~1% of home value." />
+                <InputField label="Closing %" value={inputs.closingCostPercent} onChange={(v: number) => update('closingCostPercent', v)} suffix="%" tooltip="Closing costs as % of price. Usually 2-4%." />
+                <InputField label="W2 Income" value={inputs.w2Income} onChange={(v: number) => update('w2Income', v)} prefix="$" tooltip="Your annual W2 income. Affects tax brackets and passive loss limits." />
+                <InputField label="Fed Tax" value={(inputs.federalBracket * 100).toFixed(0)} onChange={(v: number) => update('federalBracket', v / 100)} suffix="%" tooltip="Your marginal federal tax bracket." />
+                <InputField label="State Tax" value={(inputs.stateRate * 100).toFixed(0)} onChange={(v: number) => update('stateRate', v / 100)} suffix="%" tooltip="State income tax rate. MA is 5% flat." />
+                <InputField label="Appreciation μ" value={(inputs.appreciationMean * 100).toFixed(1)} onChange={(v: number) => update('appreciationMean', v / 100)} suffix="%" tooltip="Mean annual home appreciation. Historical ~5%." />
+                <InputField label="Appreciation σ" value={(inputs.appreciationStdDev * 100).toFixed(1)} onChange={(v: number) => update('appreciationStdDev', v / 100)} suffix="%" tooltip="Std dev of appreciation. Higher = more volatility." />
+                <InputField label="Stock Return μ" value={(inputs.stockReturnMean * 100).toFixed(1)} onChange={(v: number) => update('stockReturnMean', v / 100)} suffix="%" tooltip="Mean annual S&P 500 return. Historical ~10%." />
+                <InputField label="Stock Return σ" value={(inputs.stockReturnStdDev * 100).toFixed(1)} onChange={(v: number) => update('stockReturnStdDev', v / 100)} suffix="%" tooltip="Std dev of stock returns. Historical ~17%." />
+                <InputField label="Rent Growth" value={(inputs.rentGrowth * 100).toFixed(0)} onChange={(v: number) => update('rentGrowth', v / 100)} suffix="%" tooltip="Annual rent increase for your current rent." />
               </div>
             </div>
           )}
