@@ -853,9 +853,9 @@ Primary Residence Exemption,$250k/$500k,Section 121
             </p>
           </div>
           
-          {/* Step 6: Monte Carlo */}
+          {/* Step 6: Distributions */}
           <div className="p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-xl">
-            <h4 className="text-cyan-400 font-bold mb-3">Step 6: The Monte Carlo Magic</h4>
+            <h4 className="text-cyan-400 font-bold mb-3">Step 6: Return Distributions</h4>
             <div className="space-y-3 text-white/80">
               <p>
                 We run <span className="text-cyan-400 font-bold">{inputs.numSimulations.toLocaleString()}</span> simulations. 
@@ -895,21 +895,32 @@ Primary Residence Exemption,$250k/$500k,Section 121
           {/* Step 7: Final Comparison */}
           <div className="p-4 bg-gradient-to-br from-green-900/30 to-blue-900/30 border border-white/20 rounded-xl">
             <h4 className="text-white font-bold mb-3">Step 7: Final Wealth Comparison (Year {inputs.years})</h4>
+            <div className="text-xs text-white/50 mb-3">
+              Exit strategy: <span className="text-white/80 font-medium">
+                {inputs.exitStrategy === 'hold' && 'Hold Forever (paper equity, no taxes)'}
+                {inputs.exitStrategy === '1031' && '1031 Exchange (defer all taxes)'}
+                {inputs.exitStrategy === 'remote' && 'Remote Landlord (100% rental, PM fees)'}
+                {(!inputs.exitStrategy || inputs.exitStrategy === 'sell') && 'Sell (pay all taxes)'}
+              </span>
+            </div>
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <div className="text-blue-400 font-bold mb-2">🏠 If You Buy</div>
+                <div className="text-blue-400 font-bold mb-2">If You Buy</div>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-white/60">Home Value (P50)</span>
+                    <span className="text-white/60">Wealth (P50)</span>
                     <span className="font-mono">{formatCurrency(finalYear?.wealthBuy.p50 || 0)}</span>
                   </div>
                   <div className="text-xs text-white/40 pl-2">
-                    (equity after selling costs, mortgage payoff, taxes)
+                    {inputs.exitStrategy === 'hold' && '(paper equity, no selling costs or taxes)'}
+                    {inputs.exitStrategy === '1031' && '(after selling costs, taxes deferred)'}
+                    {inputs.exitStrategy === 'remote' && '(after selling costs + full taxes)'}
+                    {(!inputs.exitStrategy || inputs.exitStrategy === 'sell') && '(after selling costs, mortgage, taxes)'}
                   </div>
                 </div>
               </div>
               <div>
-                <div className="text-green-400 font-bold mb-2">📈 If You Rent + Invest</div>
+                <div className="text-green-400 font-bold mb-2">If You Rent + Invest</div>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-white/60">Portfolio Value (P50)</span>
