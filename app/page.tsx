@@ -1172,6 +1172,8 @@ function HousePageInner() {
     }))
   }, [simResults])
   
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
+  
   const InputField = ({ label, value, onChange, suffix = '', hint = '', prefix = '', tooltip = '' }: {
     label: string
     value: number | string
@@ -1181,11 +1183,28 @@ function HousePageInner() {
     prefix?: string
     tooltip?: string
   }) => (
-    <div className="mb-4" title={tooltip}>
-      <label className={`block text-sm font-medium text-white/70 mb-1.5 ${tooltip ? 'cursor-help' : ''}`}>
+    <div className="mb-4 relative">
+      <label className="block text-sm font-medium text-white/70 mb-1.5">
         {label}
         {hint && <span className="text-white/40 font-normal ml-1">({hint})</span>}
+        {tooltip && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              setActiveTooltip(activeTooltip === label ? null : label)
+            }}
+            className="ml-1 text-white/40 hover:text-white/70 text-xs"
+          >
+            ⓘ
+          </button>
+        )}
       </label>
+      {tooltip && activeTooltip === label && (
+        <div className="absolute z-10 top-6 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">
+          {tooltip}
+        </div>
+      )}
       <div className="relative">
         {prefix && (
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60">{prefix}</span>
@@ -1261,8 +1280,12 @@ function HousePageInner() {
       >
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Price */}
-          <div title="Purchase price of the property">
-            <label className="block text-xs text-white/50 mb-1 cursor-help">Price</label>
+          <div className="relative">
+            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+              Price
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'price' ? null : 'price')} className="text-white/40 hover:text-white/70">ⓘ</button>
+            </label>
+            {activeTooltip === 'price' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">Purchase price of the property</div>}
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">$</span>
               <input
@@ -1279,8 +1302,12 @@ function HousePageInner() {
           </div>
           
           {/* Down Payment */}
-          <div title="Down payment percentage. FTHB programs allow 3-5%.">
-            <label className="block text-xs text-white/50 mb-1 cursor-help">Down</label>
+          <div className="relative">
+            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+              Down
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'down' ? null : 'down')} className="text-white/40 hover:text-white/70">ⓘ</button>
+            </label>
+            {activeTooltip === 'down' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">Down payment %. FTHB programs allow 3-5%.</div>}
             <div className="relative">
               <input
                 type="text"
@@ -1297,8 +1324,12 @@ function HousePageInner() {
           </div>
           
           {/* Rate */}
-          <div title="Mortgage interest rate (30-year fixed)">
-            <label className="block text-xs text-white/50 mb-1 cursor-help">Rate</label>
+          <div className="relative">
+            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+              Rate
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'rate' ? null : 'rate')} className="text-white/40 hover:text-white/70">ⓘ</button>
+            </label>
+            {activeTooltip === 'rate' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">Mortgage interest rate (30-year fixed)</div>}
             <div className="relative">
               <input
                 type="text"
@@ -1315,8 +1346,12 @@ function HousePageInner() {
           </div>
           
           {/* Your Rent */}
-          <div title="What you currently pay in rent. Used to calculate opportunity cost.">
-            <label className="block text-xs text-white/50 mb-1 cursor-help">Your Rent</label>
+          <div className="relative">
+            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+              Your Rent
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'rent' ? null : 'rent')} className="text-white/40 hover:text-white/70">ⓘ</button>
+            </label>
+            {activeTooltip === 'rent' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">What you currently pay. Used to calculate opportunity cost.</div>}
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">$</span>
               <input
@@ -1333,8 +1368,12 @@ function HousePageInner() {
           </div>
           
           {/* Years */}
-          <div title="How long you plan to hold the property. Longer = more likely buying wins.">
-            <label className="block text-xs text-white/50 mb-1 cursor-help">Years</label>
+          <div className="relative">
+            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+              Years
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'years' ? null : 'years')} className="text-white/40 hover:text-white/70">ⓘ</button>
+            </label>
+            {activeTooltip === 'years' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">How long you plan to hold. Longer = more likely buying wins.</div>}
             <div className="relative">
               <input
                 type="text"
@@ -1351,8 +1390,12 @@ function HousePageInner() {
           </div>
           
           {/* Closing Month */}
-          <div title="Month you plan to close. Year 1 costs/income are prorated.">
-            <label className="block text-xs text-white/50 mb-1 cursor-help">Close</label>
+          <div className="relative">
+            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+              Close
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'close' ? null : 'close')} className="text-white/40 hover:text-white/70">ⓘ</button>
+            </label>
+            {activeTooltip === 'close' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">Month you close. Year 1 is prorated.</div>}
             <select
               value={inputs.closingMonth || 1}
               onChange={(e) => update('closingMonth', parseInt(e.target.value))}
