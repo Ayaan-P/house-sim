@@ -513,6 +513,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
     // Simulation
     params.set('years', inputs.years.toString())
     add('sims', inputs.numSimulations, d.numSimulations)
+    add('close', inputs.closingMonth, d.closingMonth)
     
     // Multi-family
     if (inputs.units.length > 0) {
@@ -1034,6 +1035,7 @@ function HousePageInner() {
       // Simulation
       if (pInt('years') !== null) updates.years = pInt('years')!
       if (pInt('sims') !== null) updates.numSimulations = pInt('sims')!
+      if (pInt('close') !== null) updates.closingMonth = pInt('close')!
       
       // FTHB
       if (pBool('fthb')) {
@@ -1334,6 +1336,20 @@ function HousePageInner() {
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">yr</span>
             </div>
+          </div>
+          
+          {/* Closing Month */}
+          <div>
+            <label className="block text-xs text-white/50 mb-1">Close</label>
+            <select
+              value={inputs.closingMonth || 1}
+              onChange={(e) => update('closingMonth', parseInt(e.target.value))}
+              className="w-full px-3 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg focus:border-[#84BABF] focus:outline-none"
+            >
+              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                <option key={m} value={i + 1}>{m}</option>
+              ))}
+            </select>
           </div>
         </div>
         

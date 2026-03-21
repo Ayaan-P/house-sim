@@ -120,6 +120,9 @@ export interface SimulationParams {
   filingStatus: 'single' | 'married'  // Affects standard deduction & cap gains exemption
   buildingValuePercent: number        // % of home value that's building (not land) — affects depreciation
   
+  // Closing timing
+  closingMonth: number                // 1-12 (Jan-Dec). Affects Year 1 proration.
+  
   // Alternative
   currentRent: number
   rentGrowth: number
@@ -594,14 +597,20 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     const taxGrowthFactor = Math.pow(1 + (params.propertyTaxGrowth || 0.02), year - 1)
     const insuranceGrowthFactor = Math.pow(1 + (params.insuranceGrowth || 0.05), year - 1)
     
-    const annualPropertyTax = homePrice * propertyTaxRate * taxGrowthFactor
-    const annualInsurance = insuranceAnnual * insuranceGrowthFactor
+    // Year 1 proration based on closing month (1=Jan, 12=Dec)
+    // If closing in August (month 8), Year 1 has 5 months (Aug-Dec)
+    const closingMonth = params.closingMonth || 1  // Default January
+    const year1Months = year === 1 ? (13 - closingMonth) : 12
+    const year1Proration = year1Months / 12
+    
+    const annualPropertyTax = homePrice * propertyTaxRate * taxGrowthFactor * (year === 1 ? year1Proration : 1)
+    const annualInsurance = insuranceAnnual * insuranceGrowthFactor * (year === 1 ? year1Proration : 1)
     // Maintenance is a flat annual cost, not % of home value (a $2M home doesn't cost 2x to maintain)
     // maintenanceAnnual covers repairs, appliances, HVAC, etc.
     // For condos with HOA, this should be lower since HOA covers exterior/structural
-    const annualMaintenance = (params.maintenanceAnnual || 0) * Math.pow(1.03, year - 1)  // Grows with inflation ~3%/yr
-    const annualPMI = (fthb.enabled && fthb.noPMI) ? 0 : ((loanAmount / homeValue) > 0.8 ? loanAmount * 0.005 : 0)
-    const annualHOA = (params.hoaMonthly || 0) * 12 * Math.pow(1.03, year - 1)  // HOA grows 3%/yr
+    const annualMaintenance = (params.maintenanceAnnual || 0) * Math.pow(1.03, year - 1) * (year === 1 ? year1Proration : 1)
+    const annualPMI = (fthb.enabled && fthb.noPMI) ? 0 : ((loanAmount / homeValue) > 0.8 ? loanAmount * 0.005 : 0) * (year === 1 ? year1Proration : 1)
+    const annualHOA = (params.hoaMonthly || 0) * 12 * Math.pow(1.03, year - 1) * (year === 1 ? year1Proration : 1)
     
     // Recalculate P&I if refinanced
     let currentAnnualPI = annualPI
@@ -619,13 +628,15 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     
     // Interest and principal - calculate from actual loan balance (month by month)
     // This is more accurate than the previous approximation which diverged after year 5
+    // Year 1 is prorated based on closing month
     let yearInterest = 0
     let yearPrincipal = 0
     let tempBalance = loanAmount
     const effectiveMonthlyRate = currentMortgageRate / 12
     const currentMonthlyPI = monthlyPI  // Use the payment calculated at loan origination
     
-    for (let month = 0; month < 12; month++) {
+    const monthsThisYear = year === 1 ? year1Months : 12
+    for (let month = 0; month < monthsThisYear; month++) {
       const monthInterest = tempBalance * effectiveMonthlyRate
       const monthPrincipal = Math.min(currentMonthlyPI - monthInterest, tempBalance)
       yearInterest += monthInterest
@@ -658,9 +669,10 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     // helocInterestCost is a cost, not a deduction
     
     // Rental income (calculate early for tax purposes)
+    // Year 1 prorated based on closing month
     const vacancyAdjustment = 1 - (params.vacancyRate || 0)
     const hasRentalIncome = isMultiFamily || houseHack
-    const yearRentalIncome = hasRentalIncome ? currentRentalIncome * 12 * vacancyAdjustment : 0
+    const yearRentalIncome = hasRentalIncome ? currentRentalIncome * monthsThisYear * vacancyAdjustment : 0
     
     // Rental depreciation (if renting out any portion)
     let rentalDepreciation = 0
@@ -696,7 +708,15 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
         yearDepreciation = longLifeValue / 27.5
       } else {
         // Standard 27.5 year straight-line depreciation
-        yearDepreciation = rentalBuildingValue / 27.5
+        // IRS mid-month convention: Year 1 depreciation is prorated
+        // Closing in month M = (12.5 - M) / 12 of annual depreciation
+        const fullYearDepreciation = rentalBuildingValue / 27.5
+        if (year === 1) {
+          const midMonthFactor = (12.5 - closingMonth) / 12
+          yearDepreciation = fullYearDepreciation * midMonthFactor
+        } else {
+          yearDepreciation = fullYearDepreciation
+        }
       }
       rentalDepreciation = yearDepreciation
       
@@ -971,6 +991,7 @@ export const defaultParams: SimulationParams = {
   stateRate: 0.05,                // MA flat rate
   filingStatus: 'single',         // Single or married (affects std deduction & cap gains)
   buildingValuePercent: 0.80,     // 80% building, 20% land
+  closingMonth: 8,                // August closing (default for Ayaan)
   
   currentRent: 1500,              // Ayaan's current rent
   rentGrowth: 0.03,
