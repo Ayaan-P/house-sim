@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a0a0a"/>
+  <path d="M256 80 L420 200 L420 420 L300 420 L300 300 L212 300 L212 420 L92 420 L92 200 Z" fill="#3B82F6"/>
+  <rect x="180" y="140" width="70" height="70" fill="#0a0a0a" rx="8"/>
+  <rect x="262" y="140" width="70" height="70" fill="#0a0a0a" rx="8"/>
+  <text x="256" y="480" text-anchor="middle" fill="#84BABF" font-family="system-ui" font-size="48" font-weight="bold">SIM</text>
+</svg>
