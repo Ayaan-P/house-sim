@@ -1174,7 +1174,9 @@ function HousePageInner() {
   
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   
-  const InputField = ({ label, value, onChange, suffix = '', hint = '', prefix = '', tooltip = '' }: {
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  
+  const InputField = ({ label, value, onChange, suffix = '', hint = '', prefix = '', tooltip = '', min, max }: {
     label: string
     value: number | string
     onChange: (v: number) => void
@@ -1182,66 +1184,95 @@ function HousePageInner() {
     hint?: string
     prefix?: string
     tooltip?: string
-  }) => (
-    <div className="mb-4 relative">
-      <label className="block text-sm font-medium text-white/70 mb-1.5">
-        {label}
-        {hint && <span className="text-white/40 font-normal ml-1">({hint})</span>}
-        {tooltip && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              setActiveTooltip(activeTooltip === label ? null : label)
-            }}
-            className="ml-1 text-white/40 hover:text-white/70 text-xs"
-          >
-            ⓘ
-          </button>
+    min?: number
+    max?: number
+  }) => {
+    const error = validationErrors[label]
+    
+    const validateAndSet = (input: HTMLInputElement, val: string) => {
+      const parsed = parseFloat(val)
+      if (isNaN(parsed)) {
+        input.value = String(value)
+        setValidationErrors(prev => ({ ...prev, [label]: '' }))
+        return
+      }
+      
+      // Check bounds
+      if (min !== undefined && parsed < min) {
+        setValidationErrors(prev => ({ ...prev, [label]: `Min: ${min}` }))
+        onChange(min)
+        input.value = String(min)
+        setTimeout(() => setValidationErrors(prev => ({ ...prev, [label]: '' })), 2000)
+        return
+      }
+      if (max !== undefined && parsed > max) {
+        setValidationErrors(prev => ({ ...prev, [label]: `Max: ${max}` }))
+        onChange(max)
+        input.value = String(max)
+        setTimeout(() => setValidationErrors(prev => ({ ...prev, [label]: '' })), 2000)
+        return
+      }
+      
+      setValidationErrors(prev => ({ ...prev, [label]: '' }))
+      onChange(parsed)
+    }
+    
+    return (
+      <div className="mb-4 relative">
+        <label className="block text-sm font-medium text-white/70 mb-1.5">
+          {label}
+          {hint && <span className="text-white/40 font-normal ml-1">({hint})</span>}
+          {tooltip && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                setActiveTooltip(activeTooltip === label ? null : label)
+              }}
+              className="ml-1 text-white/40 hover:text-white/70 text-xs"
+            >
+              ⓘ
+            </button>
+          )}
+        </label>
+        {tooltip && activeTooltip === label && (
+          <div className="absolute z-10 top-6 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">
+            {tooltip}
+          </div>
         )}
-      </label>
-      {tooltip && activeTooltip === label && (
-        <div className="absolute z-10 top-6 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">
-          {tooltip}
-        </div>
-      )}
-      <div className="relative">
-        {prefix && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60">{prefix}</span>
-        )}
-        <input
-          type="text"
-          inputMode="decimal"
-          key={value}
-          defaultValue={value}
-          onBlur={(e) => {
-            const parsed = parseFloat(e.target.value)
-            if (!isNaN(parsed)) {
-              onChange(parsed)
-            } else {
-              e.target.value = String(value)
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              const parsed = parseFloat((e.target as HTMLInputElement).value)
-              if (!isNaN(parsed)) {
-                onChange(parsed)
+        <div className="relative">
+          {prefix && (
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60">{prefix}</span>
+          )}
+          <input
+            type="text"
+            inputMode="decimal"
+            key={value}
+            defaultValue={value}
+            onBlur={(e) => validateAndSet(e.target, e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                validateAndSet(e.target as HTMLInputElement, (e.target as HTMLInputElement).value)
+                ;(e.target as HTMLInputElement).blur()
               }
-              (e.target as HTMLInputElement).blur()
-            }
-          }}
-          className={`w-full bg-[#0d0d0d] border border-gray-600 rounded-lg px-4 py-2.5 text-white text-base font-mono
-                     focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none
-                     hover:border-gray-500 transition-colors
-                     ${prefix ? 'pl-8' : ''} ${suffix ? 'pr-12' : ''}`}
-        />
-        {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 font-medium">{suffix}</span>
+            }}
+            className={`w-full bg-[#0d0d0d] border rounded-lg px-4 py-2.5 text-white text-base font-mono
+                       focus:ring-1 focus:outline-none hover:border-gray-500 transition-colors
+                       ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-600 focus:border-blue-500 focus:ring-blue-500'}
+                       ${prefix ? 'pl-8' : ''} ${suffix ? 'pr-12' : ''}`}
+          />
+          {suffix && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 font-medium">{suffix}</span>
+          )}
+        </div>
+        {error && (
+          <div className="absolute -bottom-5 left-0 text-xs text-red-400 animate-pulse">
+            {error}
+          </div>
         )}
       </div>
-    </div>
-  )
+    )
+  }
   
   const Stat = ({ label, value, sub = '', color = 'white' }: {
     label: string
@@ -1294,11 +1325,16 @@ function HousePageInner() {
                 defaultValue={inputs.homePrice}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value.replace(/,/g, ''))
-                  if (!isNaN(v)) update('homePrice', v)
+                  if (!isNaN(v)) {
+                    const clamped = Math.max(10000, Math.min(50000000, v))
+                    update('homePrice', clamped)
+                    if (clamped !== v) e.target.value = String(clamped)
+                  }
                 }}
-                className="w-full pl-7 pr-3 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg font-mono focus:border-[#84BABF] focus:outline-none"
+                className={`w-full pl-7 pr-3 py-2 sm:py-3 bg-black/40 border rounded-xl text-white text-base sm:text-lg font-mono focus:outline-none ${validationErrors['price'] ? 'border-red-500 focus:border-red-500' : 'border-white/10 focus:border-[#84BABF]'}`}
               />
             </div>
+            {validationErrors['price'] && <div className="absolute -bottom-4 left-0 text-xs text-red-400">{validationErrors['price']}</div>}
           </div>
           
           {/* Down Payment */}
@@ -1315,7 +1351,11 @@ function HousePageInner() {
                 defaultValue={inputs.downPaymentPercent}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value)
-                  if (!isNaN(v)) update('downPaymentPercent', v)
+                  if (!isNaN(v)) {
+                    const clamped = Math.max(0, Math.min(100, v))
+                    update('downPaymentPercent', clamped)
+                    if (clamped !== v) e.target.value = String(clamped)
+                  }
                 }}
                 className="w-full pl-3 pr-8 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg font-mono focus:border-[#84BABF] focus:outline-none"
               />
@@ -1337,7 +1377,11 @@ function HousePageInner() {
                 defaultValue={(inputs.mortgageRate * 100).toFixed(2)}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value)
-                  if (!isNaN(v)) update('mortgageRate', v / 100)
+                  if (!isNaN(v)) {
+                    const clamped = Math.max(0, Math.min(25, v))
+                    update('mortgageRate', clamped / 100)
+                    if (clamped !== v) e.target.value = clamped.toFixed(2)
+                  }
                 }}
                 className="w-full pl-3 pr-8 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg font-mono focus:border-[#84BABF] focus:outline-none"
               />
@@ -1360,7 +1404,11 @@ function HousePageInner() {
                 defaultValue={inputs.currentRent}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value.replace(/,/g, ''))
-                  if (!isNaN(v)) update('currentRent', v)
+                  if (!isNaN(v)) {
+                    const clamped = Math.max(0, Math.min(50000, v))
+                    update('currentRent', clamped)
+                    if (clamped !== v) e.target.value = String(clamped)
+                  }
                 }}
                 className="w-full pl-7 pr-3 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg font-mono focus:border-[#84BABF] focus:outline-none"
               />
@@ -1381,7 +1429,11 @@ function HousePageInner() {
                 defaultValue={inputs.years}
                 onBlur={(e) => {
                   const v = parseInt(e.target.value)
-                  if (!isNaN(v) && v > 0) update('years', v)
+                  if (!isNaN(v)) {
+                    const clamped = Math.max(1, Math.min(50, v))
+                    update('years', clamped)
+                    if (clamped !== v) e.target.value = String(clamped)
+                  }
                 }}
                 className="w-full pl-3 pr-8 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg font-mono focus:border-[#84BABF] focus:outline-none"
               />
@@ -1465,7 +1517,11 @@ function HousePageInner() {
                 defaultValue={inputs.rentalIncome}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value.replace(/,/g, ''))
-                  if (!isNaN(v)) update('rentalIncome', v)
+                  if (!isNaN(v)) {
+                    const clamped = Math.max(0, Math.min(50000, v))
+                    update('rentalIncome', clamped)
+                    if (clamped !== v) e.target.value = String(clamped)
+                  }
                 }}
                 className="w-full pl-6 pr-2 py-1.5 bg-black/40 border border-white/10 rounded-lg text-white font-mono text-sm"
               />
@@ -1505,9 +1561,11 @@ function HousePageInner() {
                       onBlur={(e) => {
                         const v = parseFloat(e.target.value.replace(/,/g, ''))
                         if (!isNaN(v)) {
+                          const clamped = Math.max(0, Math.min(50000, v))
                           const newUnits = [...inputs.units]
-                          newUnits[idx] = { ...unit, monthlyRent: v }
+                          newUnits[idx] = { ...unit, monthlyRent: clamped }
                           update('units', newUnits)
+                          if (clamped !== v) e.target.value = String(clamped)
                         }
                       }}
                       className="w-full pl-5 pr-2 py-1 bg-black/40 border border-white/10 rounded text-green-400 font-mono text-sm"
@@ -1532,17 +1590,17 @@ function HousePageInner() {
           {showAdvanced && (
             <div className="mt-4 p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <InputField label="HOA/mo" value={inputs.hoaMonthly} onChange={(v: number) => update('hoaMonthly', v)} prefix="$" tooltip="Monthly HOA dues. Multi-family usually $0." />
-                <InputField label="Maintenance/yr" value={inputs.maintenanceAnnual} onChange={(v: number) => update('maintenanceAnnual', v)} prefix="$" tooltip="Annual repairs/upkeep. ~1% of home value." />
-                <InputField label="Closing %" value={inputs.closingCostPercent} onChange={(v: number) => update('closingCostPercent', v)} suffix="%" tooltip="Closing costs as % of price. Usually 2-4%." />
-                <InputField label="W2 Income" value={inputs.w2Income} onChange={(v: number) => update('w2Income', v)} prefix="$" tooltip="Your annual W2 income. Affects tax brackets and passive loss limits." />
-                <InputField label="Fed Tax" value={(inputs.federalBracket * 100).toFixed(0)} onChange={(v: number) => update('federalBracket', v / 100)} suffix="%" tooltip="Your marginal federal tax bracket." />
-                <InputField label="State Tax" value={(inputs.stateRate * 100).toFixed(0)} onChange={(v: number) => update('stateRate', v / 100)} suffix="%" tooltip="State income tax rate. MA is 5% flat." />
-                <InputField label="Appreciation μ" value={(inputs.appreciationMean * 100).toFixed(1)} onChange={(v: number) => update('appreciationMean', v / 100)} suffix="%" tooltip="Mean annual home appreciation. Historical ~5%." />
-                <InputField label="Appreciation σ" value={(inputs.appreciationStdDev * 100).toFixed(1)} onChange={(v: number) => update('appreciationStdDev', v / 100)} suffix="%" tooltip="Std dev of appreciation. Higher = more volatility." />
-                <InputField label="Stock Return μ" value={(inputs.stockReturnMean * 100).toFixed(1)} onChange={(v: number) => update('stockReturnMean', v / 100)} suffix="%" tooltip="Mean annual S&P 500 return. Historical ~10%." />
-                <InputField label="Stock Return σ" value={(inputs.stockReturnStdDev * 100).toFixed(1)} onChange={(v: number) => update('stockReturnStdDev', v / 100)} suffix="%" tooltip="Std dev of stock returns. Historical ~17%." />
-                <InputField label="Rent Growth" value={(inputs.rentGrowth * 100).toFixed(0)} onChange={(v: number) => update('rentGrowth', v / 100)} suffix="%" tooltip="Annual rent increase for your current rent." />
+                <InputField label="HOA/mo" value={inputs.hoaMonthly} onChange={(v: number) => update('hoaMonthly', v)} prefix="$" tooltip="Monthly HOA dues. Multi-family usually $0." min={0} max={5000} />
+                <InputField label="Maintenance/yr" value={inputs.maintenanceAnnual} onChange={(v: number) => update('maintenanceAnnual', v)} prefix="$" tooltip="Annual repairs/upkeep. ~1% of home value." min={0} max={100000} />
+                <InputField label="Closing %" value={inputs.closingCostPercent} onChange={(v: number) => update('closingCostPercent', v)} suffix="%" tooltip="Closing costs as % of price. Usually 2-4%." min={0} max={10} />
+                <InputField label="W2 Income" value={inputs.w2Income} onChange={(v: number) => update('w2Income', v)} prefix="$" tooltip="Your annual W2 income. Affects tax brackets and passive loss limits." min={0} max={10000000} />
+                <InputField label="Fed Tax" value={(inputs.federalBracket * 100).toFixed(0)} onChange={(v: number) => update('federalBracket', v / 100)} suffix="%" tooltip="Your marginal federal tax bracket." min={0} max={50} />
+                <InputField label="State Tax" value={(inputs.stateRate * 100).toFixed(0)} onChange={(v: number) => update('stateRate', v / 100)} suffix="%" tooltip="State income tax rate. MA is 5% flat." min={0} max={15} />
+                <InputField label="Appreciation μ" value={(inputs.appreciationMean * 100).toFixed(1)} onChange={(v: number) => update('appreciationMean', v / 100)} suffix="%" tooltip="Mean annual home appreciation. Historical ~5%." min={-20} max={30} />
+                <InputField label="Appreciation σ" value={(inputs.appreciationStdDev * 100).toFixed(1)} onChange={(v: number) => update('appreciationStdDev', v / 100)} suffix="%" tooltip="Std dev of appreciation. Higher = more volatility." min={0} max={50} />
+                <InputField label="Stock Return μ" value={(inputs.stockReturnMean * 100).toFixed(1)} onChange={(v: number) => update('stockReturnMean', v / 100)} suffix="%" tooltip="Mean annual S&P 500 return. Historical ~10%." min={-50} max={50} />
+                <InputField label="Stock Return σ" value={(inputs.stockReturnStdDev * 100).toFixed(1)} onChange={(v: number) => update('stockReturnStdDev', v / 100)} suffix="%" tooltip="Std dev of stock returns. Historical ~17%." min={0} max={100} />
+                <InputField label="Rent Growth" value={(inputs.rentGrowth * 100).toFixed(0)} onChange={(v: number) => update('rentGrowth', v / 100)} suffix="%" tooltip="Annual rent increase for your current rent." min={-10} max={20} />
               </div>
             </div>
           )}
