@@ -1280,12 +1280,12 @@ function HousePageInner() {
     sub?: string
     color?: 'white' | 'green' | 'red' | 'blue'
   }) => (
-    <div className="bg-white/[0.04]/60 rounded-lg p-3 md:p-4 border border-white/[0.08]/50">
-      <div className="text-white/60 text-xs md:text-sm mb-1 truncate">{label}</div>
-      <div className={`text-lg md:text-2xl font-bold font-mono ${color === 'green' ? 'text-green-400' : color === 'red' ? 'text-red-400' : color === 'blue' ? 'text-blue-400' : 'text-white'}`}>
+    <div className="bg-white/[0.04]/60 rounded-lg p-3 md:p-4 border border-white/[0.08]/50 min-w-0">
+      <div className="text-white/60 text-[10px] sm:text-xs md:text-sm mb-1 truncate leading-tight">{label}</div>
+      <div className={`text-base sm:text-lg md:text-2xl font-bold font-mono truncate ${color === 'green' ? 'text-green-400' : color === 'red' ? 'text-red-400' : color === 'blue' ? 'text-blue-400' : 'text-white'}`}>
         {value}
       </div>
-      {sub && <div className="text-white/40 text-xs mt-1">{sub}</div>}
+      {sub && <div className="text-white/40 text-[10px] sm:text-xs mt-1">{sub}</div>}
     </div>
   )
 
@@ -1960,7 +1960,31 @@ function HousePageInner() {
           
           {/* Detailed Table */}
           <Section title="📅 Year-by-Year Percentiles">
-            <div className="overflow-x-auto">
+            {/* Mobile view: simplified card layout */}
+            <div className="md:hidden space-y-2">
+              {simResults.yearlyStats.map((y) => (
+                <div key={y.year} className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.06]">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-white/60 text-sm font-medium">Year {y.year}</span>
+                    <span className={`text-sm font-bold ${y.delta.p50 > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      Δ {formatCurrency(y.delta.p50)}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-white/40">Buy:</span>
+                      <span className="text-green-400 ml-1">{formatCurrency(y.wealthBuy.p50)}</span>
+                    </div>
+                    <div>
+                      <span className="text-white/40">Rent:</span>
+                      <span className="text-red-400 ml-1">{formatCurrency(y.wealthRent.p50)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop view: full table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-white/60 border-b border-white/[0.08]">
@@ -1998,27 +2022,27 @@ function HousePageInner() {
           
           {/* Distribution Stats */}
           <Section title="Final Distribution Details">
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-sm font-medium text-white/60 mb-2">Buy Scenario (Year {inputs.years})</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>Min: {formatCurrency(simResults.finalStats.wealthBuy.min)}</div>
-                  <div>Max: {formatCurrency(simResults.finalStats.wealthBuy.max)}</div>
-                  <div>P10: {formatCurrency(simResults.finalStats.wealthBuy.p10)}</div>
-                  <div>P90: {formatCurrency(simResults.finalStats.wealthBuy.p90)}</div>
-                  <div>Mean: {formatCurrency(simResults.finalStats.wealthBuy.mean)}</div>
-                  <div>Median: {formatCurrency(simResults.finalStats.wealthBuy.p50)}</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div className="bg-green-900/10 rounded-lg p-3 sm:p-4 border border-green-500/20">
+                <h4 className="text-sm font-medium text-green-400/80 mb-2">Buy Scenario (Year {inputs.years})</h4>
+                <div className="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <div className="text-white/60">Min: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.min)}</span></div>
+                  <div className="text-white/60">Max: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.max)}</span></div>
+                  <div className="text-white/60">P10: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.p10)}</span></div>
+                  <div className="text-white/60">P90: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.p90)}</span></div>
+                  <div className="text-white/60">Mean: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.mean)}</span></div>
+                  <div className="text-white/60">Median: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.p50)}</span></div>
                 </div>
               </div>
-              <div>
-                <h4 className="text-sm font-medium text-white/60 mb-2">Rent Scenario (Year {inputs.years})</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>Min: {formatCurrency(simResults.finalStats.wealthRent.min)}</div>
-                  <div>Max: {formatCurrency(simResults.finalStats.wealthRent.max)}</div>
-                  <div>P10: {formatCurrency(simResults.finalStats.wealthRent.p10)}</div>
-                  <div>P90: {formatCurrency(simResults.finalStats.wealthRent.p90)}</div>
-                  <div>Mean: {formatCurrency(simResults.finalStats.wealthRent.mean)}</div>
-                  <div>Median: {formatCurrency(simResults.finalStats.wealthRent.p50)}</div>
+              <div className="bg-red-900/10 rounded-lg p-3 sm:p-4 border border-red-500/20">
+                <h4 className="text-sm font-medium text-red-400/80 mb-2">Rent Scenario (Year {inputs.years})</h4>
+                <div className="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <div className="text-white/60">Min: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.min)}</span></div>
+                  <div className="text-white/60">Max: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.max)}</span></div>
+                  <div className="text-white/60">P10: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.p10)}</span></div>
+                  <div className="text-white/60">P90: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.p90)}</span></div>
+                  <div className="text-white/60">Mean: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.mean)}</span></div>
+                  <div className="text-white/60">Median: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.p50)}</span></div>
                 </div>
               </div>
             </div>
