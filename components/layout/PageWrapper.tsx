@@ -14,7 +14,12 @@ const maxWidthStyles = {
 
 export function PageWrapper({ children, className, maxWidth = 'default' }: PageWrapperProps) {
   return (
-    <main className={cn('mx-auto px-4 pb-16', maxWidthStyles[maxWidth], className)}>
+    <main className={cn(
+      'mx-auto px-3 sm:px-4 pb-16',
+      'pt-[var(--safe-area-inset-top)]',
+      maxWidthStyles[maxWidth],
+      className
+    )}>
       {children}
     </main>
   )

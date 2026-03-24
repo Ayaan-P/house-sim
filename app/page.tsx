@@ -2075,7 +2075,7 @@ function HousePageInner() {
           
           {/* Advanced Analysis Section */}
           <Section title="🔬 Advanced Analysis">
-            <div className="flex gap-4 mb-6">
+            <div className="flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6">
               <button
                 onClick={() => {
                   setIsRunningSensitivity(true)
@@ -2086,8 +2086,8 @@ function HousePageInner() {
                   }, 50)
                 }}
                 disabled={isRunningSensitivity}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:cursor-not-allowed
-                           rounded-lg text-white font-medium text-sm transition-colors flex items-center gap-2"
+                className="px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:cursor-not-allowed
+                           rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningSensitivity ? (
                   <>
@@ -2098,7 +2098,7 @@ function HousePageInner() {
                     Running...
                   </>
                 ) : (
-                  <>🌪️ Sensitivity Analysis</>
+                  <>🌪️ <span className="hidden xs:inline">Sensitivity</span><span className="xs:hidden">Sens.</span> Analysis</>
                 )}
               </button>
               
@@ -2112,8 +2112,8 @@ function HousePageInner() {
                   }, 50)
                 }}
                 disabled={isRunningBreakEven}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed
-                           rounded-lg text-white font-medium text-sm transition-colors flex items-center gap-2"
+                className="px-3 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed
+                           rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningBreakEven ? (
                   <>
@@ -2132,11 +2132,11 @@ function HousePageInner() {
             {/* Sensitivity Analysis Results (Tornado Chart) */}
             {sensitivityResults && (
               <div className="mb-8">
-                <h4 className="text-lg font-bold text-white mb-4">🌪️ Sensitivity Analysis</h4>
-                <p className="text-white/60 text-sm mb-4">
+                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">🌪️ Sensitivity Analysis</h4>
+                <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
                   Which inputs swing the outcome most? Bars show P50 delta change when varying each parameter ±10-20%.
                 </p>
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {sensitivityResults.map((result) => {
                     const maxImpact = sensitivityResults[0]?.impact || 1
                     const leftWidth = Math.abs(result.lowP50Delta - result.baseP50Delta) / maxImpact * 100
@@ -2145,36 +2145,36 @@ function HousePageInner() {
                     const rightColor = result.highP50Delta > result.baseP50Delta ? 'bg-green-500' : 'bg-red-500'
                     
                     return (
-                      <div key={result.parameter} className="flex items-center gap-4">
-                        <div className="w-32 text-sm text-white/70 text-right shrink-0">
+                      <div key={result.parameter} className="flex items-center gap-2 sm:gap-4">
+                        <div className="w-20 sm:w-32 text-xs sm:text-sm text-white/70 text-right shrink-0 truncate">
                           {result.label}
                         </div>
-                        <div className="flex-1 flex items-center h-6">
+                        <div className="flex-1 flex items-center h-5 sm:h-6">
                           {/* Left bar (low value effect) */}
                           <div className="flex-1 flex justify-end">
                             <div 
-                              className={`h-5 ${leftColor} rounded-l`}
+                              className={`h-4 sm:h-5 ${leftColor} rounded-l`}
                               style={{ width: `${Math.min(leftWidth, 100)}%` }}
                             />
                           </div>
                           {/* Center line */}
-                          <div className="w-px h-6 bg-white/40" />
+                          <div className="w-px h-5 sm:h-6 bg-white/40" />
                           {/* Right bar (high value effect) */}
                           <div className="flex-1">
                             <div 
-                              className={`h-5 ${rightColor} rounded-r`}
+                              className={`h-4 sm:h-5 ${rightColor} rounded-r`}
                               style={{ width: `${Math.min(rightWidth, 100)}%` }}
                             />
                           </div>
                         </div>
-                        <div className="w-24 text-xs text-white/50 shrink-0">
+                        <div className="w-16 sm:w-24 text-[10px] sm:text-xs text-white/50 shrink-0 text-right">
                           ±{formatCurrency(result.impact / 2)}
                         </div>
                       </div>
                     )
                   })}
                 </div>
-                <div className="mt-4 flex justify-center gap-6 text-xs text-white/40">
+                <div className="mt-3 sm:mt-4 flex justify-center gap-4 sm:gap-6 text-[10px] sm:text-xs text-white/40">
                   <span>← Lower value</span>
                   <span className="text-white/60">|</span>
                   <span>Higher value →</span>
@@ -2185,17 +2185,17 @@ function HousePageInner() {
             {/* Break-Even Surface (Heatmap) */}
             {breakEvenSurface && (
               <div>
-                <h4 className="text-lg font-bold text-white mb-4">📊 Break-Even Surface</h4>
-                <p className="text-white/60 text-sm mb-4">
+                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">📊 Break-Even Surface</h4>
+                <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
                   Win probability (buy vs rent) across {breakEvenSurface.xLabel} × {breakEvenSurface.yLabel}. 
                   Green = buy wins, Red = rent wins, Yellow = break-even.
                 </p>
-                <div className="overflow-x-auto">
-                  <div className="inline-block">
+                <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+                  <div className="inline-block min-w-max">
                     {/* Y-axis label */}
                     <div className="flex">
-                      <div className="w-20" />
-                      <div className="flex-1 text-center text-xs text-white/60 mb-2">
+                      <div className="w-14 sm:w-20" />
+                      <div className="flex-1 text-center text-[10px] sm:text-xs text-white/60 mb-1 sm:mb-2">
                         {breakEvenSurface.xLabel}
                       </div>
                     </div>
@@ -2203,12 +2203,12 @@ function HousePageInner() {
                     {/* Grid */}
                     <div className="flex">
                       {/* Y-axis */}
-                      <div className="w-20 flex flex-col justify-between pr-2 text-right">
-                        <div className="text-xs text-white/60 -rotate-0">
+                      <div className="w-14 sm:w-20 flex flex-col justify-between pr-1 sm:pr-2 text-right">
+                        <div className="text-[10px] sm:text-xs text-white/60 -rotate-0">
                           {breakEvenSurface.yLabel}
                         </div>
                         {breakEvenSurface.yValues.slice().reverse().map((y, i) => (
-                          <div key={i} className="text-xs text-white/40 h-10 flex items-center justify-end">
+                          <div key={i} className="text-[10px] sm:text-xs text-white/40 h-8 sm:h-10 flex items-center justify-end">
                             {breakEvenSurface.yLabel.includes('%') 
                               ? `${y.toFixed(0)}%`
                               : breakEvenSurface.yLabel.includes('Rate')
@@ -2236,7 +2236,7 @@ function HousePageInner() {
                                 return (
                                   <div
                                     key={xi}
-                                    className="w-12 h-10 flex items-center justify-center text-xs font-bold border border-black/20"
+                                    className="w-9 h-8 sm:w-12 sm:h-10 flex items-center justify-center text-[10px] sm:text-xs font-bold border border-black/20"
                                     style={{ backgroundColor: `rgb(${r}, ${g}, ${b})` }}
                                     title={`${breakEvenSurface.xLabel}: ${formatCurrency(cell.x)}\n${breakEvenSurface.yLabel}: ${cell.y.toFixed(1)}%\nWin Rate: ${(winRate * 100).toFixed(0)}%\nP50 Delta: ${formatCurrency(cell.p50Delta)}`}
                                   >
@@ -2251,7 +2251,7 @@ function HousePageInner() {
                         {/* X-axis labels */}
                         <div className="flex mt-1">
                           {breakEvenSurface.xValues.map((x, i) => (
-                            <div key={i} className="w-12 text-center text-xs text-white/40">
+                            <div key={i} className="w-9 sm:w-12 text-center text-[10px] sm:text-xs text-white/40">
                               ${(x/1000).toFixed(0)}k
                             </div>
                           ))}
@@ -2261,17 +2261,17 @@ function HousePageInner() {
                   </div>
                 </div>
                 
-                <div className="mt-4 flex items-center gap-4 text-xs text-white/40">
+                <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-white/40">
                   <div className="flex items-center gap-1">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgb(255, 0, 0)' }} />
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 rounded" style={{ backgroundColor: 'rgb(255, 0, 0)' }} />
                     <span>Rent wins</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgb(255, 255, 0)' }} />
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 rounded" style={{ backgroundColor: 'rgb(255, 255, 0)' }} />
                     <span>Break-even</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgb(0, 255, 0)' }} />
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 rounded" style={{ backgroundColor: 'rgb(0, 255, 0)' }} />
                     <span>Buy wins</span>
                   </div>
                 </div>
