@@ -16,6 +16,8 @@ interface HeaderProps {
 export function Header({ title, backLink, children, className, showAuth = true }: HeaderProps) {
   return (
     <header
+      role="banner"
+      aria-label={title}
       className={cn(
         'flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 border-b border-[#1a1a1a] mb-6 gap-3',
         className
