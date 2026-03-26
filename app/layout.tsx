@@ -2,6 +2,7 @@ import './globals.css'
 import { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/components/AuthProvider'
 import { InstallPrompt } from '@/components/InstallPrompt'
+import { ThemeProvider } from '@/components/theme-provider'
 
 export const metadata: Metadata = {
   title: 'HouseSim - Buy vs Rent Simulator',
@@ -28,17 +29,39 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* Prevent flash of wrong theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem('house-sim-theme');
+                  var theme = stored || 'system';
+                  var resolved = theme;
+                  if (theme === 'system') {
+                    resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  }
+                  document.documentElement.classList.add(resolved);
+                } catch (e) {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
       </head>
-      <body className="bg-[#0a0a0a] text-white min-h-screen">
-        <AuthProvider>
-          {children}
-          <InstallPrompt />
-        </AuthProvider>
+      <body className="bg-[var(--background)] text-[var(--foreground)] min-h-screen transition-colors duration-200">
+        <ThemeProvider>
+          <AuthProvider>
+            {children}
+            <InstallPrompt />
+          </AuthProvider>
+        </ThemeProvider>
         <script
           dangerouslySetInnerHTML={{
             __html: `

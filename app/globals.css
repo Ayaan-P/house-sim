@@ -2,14 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== THEME SYSTEM ===== */
+/* Light mode (default) */
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  /* Backgrounds */
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+  --surface-raised: #ffffff;
+  
+  /* Text */
+  --foreground: #0f172a;
+  --content: #0f172a;
+  --content-muted: #475569;
+  --content-subtle: #94a3b8;
+  
+  /* Borders */
+  --border: #e2e8f0;
+  --border-muted: #f1f5f9;
+  
+  /* Accent */
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  
+  /* Chart colors (semantic) */
+  --chart-buy: #10b981;
+  --chart-rent: #ef4444;
+  --chart-delta: #3b82f6;
+  --chart-grid: #e2e8f0;
+  
   /* iOS safe areas */
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
+}
+
+/* Dark mode */
+.dark {
+  --background: #0a0a0a;
+  --surface: #111111;
+  --surface-muted: #1a1a1a;
+  --surface-raised: #1f1f1f;
+  
+  --foreground: #ededed;
+  --content: #ededed;
+  --content-muted: rgba(255, 255, 255, 0.7);
+  --content-subtle: rgba(255, 255, 255, 0.4);
+  
+  --border: rgba(255, 255, 255, 0.08);
+  --border-muted: rgba(255, 255, 255, 0.04);
+  
+  --accent: #84babf;
+  --accent-hover: #9ecfd3;
+  
+  --chart-buy: #10b981;
+  --chart-rent: #ef4444;
+  --chart-delta: #3b82f6;
+  --chart-grid: #374151;
+}
+
+/* System preference detection (when no explicit preference) */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #0a0a0a;
+    --surface: #111111;
+    --surface-muted: #1a1a1a;
+    --surface-raised: #1f1f1f;
+    
+    --foreground: #ededed;
+    --content: #ededed;
+    --content-muted: rgba(255, 255, 255, 0.7);
+    --content-subtle: rgba(255, 255, 255, 0.4);
+    
+    --border: rgba(255, 255, 255, 0.08);
+    --border-muted: rgba(255, 255, 255, 0.04);
+    
+    --accent: #84babf;
+    --accent-hover: #9ecfd3;
+    
+    --chart-buy: #10b981;
+    --chart-rent: #ef4444;
+    --chart-delta: #3b82f6;
+    --chart-grid: #374151;
+  }
 }
 
 body {
@@ -19,6 +95,8 @@ body {
   overscroll-behavior-y: contain;
   /* Smooth scrolling */
   -webkit-overflow-scrolling: touch;
+  /* Smooth theme transitions */
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* PWA standalone mode adjustments */
