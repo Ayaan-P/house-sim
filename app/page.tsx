@@ -8,7 +8,7 @@ import {
   AreaChart, Area, ComposedChart, ReferenceLine,
 } from 'recharts'
 import { 
-  runSimulation, defaultParams, SimulationParams, SimulationSummary,
+  runSimulation, defaultParams, SimulationParams, SimulationSummary, SimulationRun,
   Unit, createMultiFamilyUnits, getUnitSummary,
   runSensitivityAnalysis, SensitivityResult,
   runBreakEvenSurface, BreakEvenSurface
@@ -960,6 +960,268 @@ Primary Residence Exemption,$250k/$500k,Section 121
         </div>
       )}
     </Section>
+  )
+}
+
+// Interactive Histogram Component for Monte Carlo Results
+interface HistogramBin {
+  rangeMin: number
+  rangeMax: number
+  count: number
+  percentage: number
+  cumulativePercentile: number  // What percentile this bin ends at
+  runs: { id: number; delta: number; wealthBuy: number; wealthRent: number }[]
+}
+
+interface DeltaHistogramProps {
+  runs: SimulationRun[]
+  finalStats: {
+    delta: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number }
+    buyWinsProbability: number
+  }
+  numSimulations: number
+  formatCurrency: (n: number) => string
+}
+
+function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: DeltaHistogramProps) {
+  const [hoveredBin, setHoveredBin] = useState<HistogramBin | null>(null)
+  const [selectedBin, setSelectedBin] = useState<HistogramBin | null>(null)
+  const [animationComplete, setAnimationComplete] = useState(false)
+  
+  // Calculate histogram bins from runs
+  const histogramData = useMemo(() => {
+    const deltas = runs.map(r => r.finalDelta)
+    const min = Math.min(...deltas)
+    const max = Math.max(...deltas)
+    
+    // Use ~20-30 bins for good granularity
+    const numBins = Math.min(30, Math.max(15, Math.ceil(Math.sqrt(runs.length))))
+    const binWidth = (max - min) / numBins
+    
+    // Create bins
+    const bins: HistogramBin[] = []
+    let cumulative = 0
+    
+    for (let i = 0; i < numBins; i++) {
+      const rangeMin = min + i * binWidth
+      const rangeMax = min + (i + 1) * binWidth
+      
+      const runsInBin = runs.filter(r => {
+        if (i === numBins - 1) {
+          // Last bin includes the max value
+          return r.finalDelta >= rangeMin && r.finalDelta <= rangeMax
+        }
+        return r.finalDelta >= rangeMin && r.finalDelta < rangeMax
+      })
+      
+      const count = runsInBin.length
+      const percentage = (count / runs.length) * 100
+      cumulative += count
+      
+      bins.push({
+        rangeMin,
+        rangeMax,
+        count,
+        percentage,
+        cumulativePercentile: (cumulative / runs.length) * 100,
+        runs: runsInBin.slice(0, 10).map(r => ({
+          id: r.id,
+          delta: r.finalDelta,
+          wealthBuy: r.finalWealthBuy,
+          wealthRent: r.finalWealthRent,
+        })),
+      })
+    }
+    
+    return { bins, min, max, maxCount: Math.max(...bins.map(b => b.count)) }
+  }, [runs])
+  
+  // Trigger animation on mount
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimationComplete(true), 50)
+    return () => clearTimeout(timer)
+  }, [runs])
+  
+  // Reset animation when runs change
+  useEffect(() => {
+    setAnimationComplete(false)
+    const timer = setTimeout(() => setAnimationComplete(true), 50)
+    return () => clearTimeout(timer)
+  }, [runs])
+  
+  // Calculate percentile for a given value
+  const getPercentile = (value: number) => {
+    const count = runs.filter(r => r.finalDelta <= value).length
+    return (count / runs.length) * 100
+  }
+  
+  return (
+    <div className="space-y-4">
+      {/* Histogram Chart */}
+      <div className="relative">
+        {/* Y-axis label */}
+        <div className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-90 text-white/40 text-xs whitespace-nowrap">
+          Simulations
+        </div>
+        
+        {/* Chart area */}
+        <div className="ml-8 h-48 md:h-64 flex items-end gap-[1px] md:gap-0.5">
+          {histogramData.bins.map((bin, idx) => {
+            const heightPercent = (bin.count / histogramData.maxCount) * 100
+            const isNegative = bin.rangeMax < 0
+            const isPositive = bin.rangeMin >= 0
+            const isZeroCrossing = bin.rangeMin < 0 && bin.rangeMax >= 0
+            
+            // Color based on delta value
+            let bgColor = 'bg-blue-500'
+            if (isNegative) bgColor = 'bg-red-500'
+            else if (isPositive) bgColor = 'bg-green-500'
+            else if (isZeroCrossing) bgColor = 'bg-gradient-to-t from-red-500 to-green-500'
+            
+            const isHovered = hoveredBin === bin
+            const isSelected = selectedBin === bin
+            
+            return (
+              <div
+                key={idx}
+                className={`flex-1 relative cursor-pointer transition-all duration-300 ease-out
+                           ${isHovered || isSelected ? 'opacity-100 scale-y-105' : 'opacity-80 hover:opacity-95'}
+                           ${isSelected ? 'ring-2 ring-white/50' : ''}`}
+                style={{ 
+                  height: animationComplete ? `${heightPercent}%` : '0%',
+                  transitionDelay: `${idx * 15}ms`,
+                }}
+                onMouseEnter={() => setHoveredBin(bin)}
+                onMouseLeave={() => setHoveredBin(null)}
+                onClick={() => setSelectedBin(selectedBin === bin ? null : bin)}
+              >
+                <div className={`absolute inset-0 ${bgColor} rounded-t-sm`} />
+                
+                {/* Percentile markers on specific bins */}
+                {idx > 0 && histogramData.bins[idx - 1].cumulativePercentile < 10 && bin.cumulativePercentile >= 10 && (
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-white/60 whitespace-nowrap">P10</div>
+                )}
+                {idx > 0 && histogramData.bins[idx - 1].cumulativePercentile < 50 && bin.cumulativePercentile >= 50 && (
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-yellow-400 font-bold whitespace-nowrap">P50</div>
+                )}
+                {idx > 0 && histogramData.bins[idx - 1].cumulativePercentile < 90 && bin.cumulativePercentile >= 90 && (
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-white/60 whitespace-nowrap">P90</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        
+        {/* X-axis */}
+        <div className="ml-8 flex justify-between mt-2 text-xs text-white/40">
+          <span>{formatCurrency(histogramData.min)}</span>
+          <span className="text-white/60">← Rent wins | Buy wins →</span>
+          <span>{formatCurrency(histogramData.max)}</span>
+        </div>
+        
+        {/* Zero line indicator */}
+        {histogramData.min < 0 && histogramData.max > 0 && (
+          <div 
+            className="absolute bottom-8 w-0.5 h-48 md:h-64 bg-white/30"
+            style={{ 
+              left: `calc(2rem + ${((0 - histogramData.min) / (histogramData.max - histogramData.min)) * 100}% - 1px)` 
+            }}
+          >
+            <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-white/70 whitespace-nowrap">$0</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Hover tooltip */}
+      {hoveredBin && !selectedBin && (
+        <div className="p-3 bg-white/[0.03] border border-white/[0.1] rounded-lg animate-in fade-in duration-150">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div>
+              <span className="text-white/50">Range:</span>
+              <span className="text-white ml-1 font-mono">{formatCurrency(hoveredBin.rangeMin)} to {formatCurrency(hoveredBin.rangeMax)}</span>
+            </div>
+            <div>
+              <span className="text-white/50">Count:</span>
+              <span className="text-white ml-1 font-mono">{hoveredBin.count.toLocaleString()} ({hoveredBin.percentage.toFixed(1)}%)</span>
+            </div>
+            <div>
+              <span className="text-white/50">Percentile:</span>
+              <span className="text-white ml-1 font-mono">P{Math.round(hoveredBin.cumulativePercentile - hoveredBin.percentage / 2)} – P{Math.round(hoveredBin.cumulativePercentile)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Selected bin detail panel */}
+      {selectedBin && (
+        <div className="p-4 bg-white/[0.03] border border-white/[0.15] rounded-xl animate-in slide-in-from-bottom-2 duration-200">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-white font-medium">
+              Bin Details: {formatCurrency(selectedBin.rangeMin)} to {formatCurrency(selectedBin.rangeMax)}
+            </h4>
+            <button 
+              onClick={() => setSelectedBin(null)}
+              className="text-white/40 hover:text-white/70 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="bg-white/[0.02] rounded-lg p-2">
+              <div className="text-white/50 text-xs">Simulations</div>
+              <div className="text-white font-mono text-lg">{selectedBin.count.toLocaleString()}</div>
+              <div className="text-white/40 text-xs">{selectedBin.percentage.toFixed(2)}% of total</div>
+            </div>
+            <div className="bg-white/[0.02] rounded-lg p-2">
+              <div className="text-white/50 text-xs">Percentile Range</div>
+              <div className="text-white font-mono text-lg">P{Math.round(selectedBin.cumulativePercentile - selectedBin.percentage)} – P{Math.round(selectedBin.cumulativePercentile)}</div>
+            </div>
+            <div className="bg-white/[0.02] rounded-lg p-2">
+              <div className="text-white/50 text-xs">Avg Delta</div>
+              <div className={`font-mono text-lg ${(selectedBin.rangeMin + selectedBin.rangeMax) / 2 > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {formatCurrency((selectedBin.rangeMin + selectedBin.rangeMax) / 2)}
+              </div>
+            </div>
+            <div className="bg-white/[0.02] rounded-lg p-2">
+              <div className="text-white/50 text-xs">Outcome</div>
+              <div className={`font-medium ${selectedBin.rangeMax < 0 ? 'text-red-400' : selectedBin.rangeMin > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                {selectedBin.rangeMax < 0 ? 'Rent wins' : selectedBin.rangeMin > 0 ? 'Buy wins' : 'Mixed'}
+              </div>
+            </div>
+          </div>
+          
+          {/* Sample runs from this bin */}
+          <div className="text-white/50 text-xs mb-2">Sample Simulations (up to 10)</div>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {selectedBin.runs.map((run, i) => (
+              <div key={i} className="flex items-center gap-4 text-xs bg-white/[0.01] rounded px-2 py-1">
+                <span className="text-white/40 w-8">#{run.id}</span>
+                <span className="text-green-400/80">Buy: {formatCurrency(run.wealthBuy)}</span>
+                <span className="text-red-400/80">Rent: {formatCurrency(run.wealthRent)}</span>
+                <span className={`ml-auto font-mono ${run.delta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  Δ {formatCurrency(run.delta)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Legend / Key Stats */}
+      <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-white/50">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 bg-red-500 rounded-sm" />
+          <span>Rent wins ({((1 - finalStats.buyWinsProbability) * 100).toFixed(0)}%)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 bg-green-500 rounded-sm" />
+          <span>Buy wins ({(finalStats.buyWinsProbability * 100).toFixed(0)}%)</span>
+        </div>
+        <div className="text-white/30">|</div>
+        <span>Hover for percentile • Click for details</span>
+      </div>
+    </div>
   )
 }
 
@@ -1924,6 +2186,16 @@ function HousePageInner() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+          </Section>
+          
+          {/* Interactive Monte Carlo Histogram */}
+          <Section title="📊 Final Outcome Distribution (Interactive)">
+            <DeltaHistogram 
+              runs={simResults.runs} 
+              finalStats={simResults.finalStats}
+              numSimulations={inputs.numSimulations}
+              formatCurrency={formatCurrency}
+            />
           </Section>
           
           {/* HELOC Stats (if enabled) */}
