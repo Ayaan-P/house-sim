@@ -13,6 +13,7 @@ import {
   runSensitivityAnalysis, SensitivityResult,
   runBreakEvenSurface, BreakEvenSurface
 } from '@/lib/monte-carlo'
+import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
 
 // Wrapper component to handle searchParams with Suspense
 function HousePageContent() {
@@ -1240,6 +1241,7 @@ function HousePageInner() {
   // Collapsible state (must be before URL parsing useEffect)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showStrategies, setShowStrategies] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
   
   // Parse URL params - comprehensive list of all SimulationParams fields
   useEffect(() => {
@@ -1403,6 +1405,62 @@ function HousePageInner() {
       setSimResults(results)
       setIsRunning(false)
     }, 50)
+  }, [inputs])
+  
+  // Share URL generation (used by keyboard shortcuts and share button)
+  const shareUrl = useCallback(() => {
+    const params = new URLSearchParams()
+    const d = defaultParams
+    
+    const add = (key: string, val: number | string, def?: number | string) => {
+      if (def === undefined || val !== def) params.set(key, val.toString())
+    }
+    const addPct = (key: string, val: number, def?: number) => {
+      if (def === undefined || val !== def) params.set(key, (val * 100).toString())
+    }
+    
+    // Core params (always include)
+    params.set('price', inputs.homePrice.toString())
+    params.set('down', inputs.downPaymentPercent.toString())
+    addPct('rate', inputs.mortgageRate, d.mortgageRate)
+    addPct('tax', inputs.propertyTaxRate, d.propertyTaxRate)
+    add('insurance', inputs.insuranceAnnual, d.insuranceAnnual)
+    add('closing', inputs.closingCostPercent, d.closingCostPercent)
+    add('hoa', inputs.hoaMonthly, d.hoaMonthly)
+    add('maint', inputs.maintenanceAnnual, d.maintenanceAnnual)
+    if (inputs.houseHack) params.set('househack', '1')
+    if (inputs.rentalIncome > 0) add('rental', inputs.rentalIncome, 0)
+    add('income', inputs.w2Income, d.w2Income)
+    addPct('fedbracket', inputs.federalBracket, d.federalBracket)
+    addPct('staterate', inputs.stateRate, d.stateRate)
+    params.set('rent', inputs.currentRent.toString())
+    addPct('rentgrowth', inputs.rentGrowth, d.rentGrowth)
+    addPct('appr', inputs.appreciationMean, d.appreciationMean)
+    addPct('stock', inputs.stockReturnMean, d.stockReturnMean)
+    params.set('years', inputs.years.toString())
+    
+    // Multi-family
+    if (inputs.units.length > 0) {
+      params.set('type', `${inputs.units.length}-family`)
+      const totalRent = inputs.units.filter(u => !u.ownerOccupied).reduce((sum, u) => sum + u.monthlyRent, 0)
+      params.set('rental', totalRent.toString())
+    }
+    
+    // FTHB
+    if (inputs.firstTimeHomeBuyer?.enabled) {
+      params.set('fthb', '1')
+      if (inputs.firstTimeHomeBuyer.noPMI) params.set('nopmi', '1')
+    }
+    
+    // Exit Strategy
+    if (inputs.exitStrategy && inputs.exitStrategy !== 'sell') {
+      params.set('exit', inputs.exitStrategy)
+    }
+    
+    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
+    navigator.clipboard.writeText(url)
+    setShareCopied(true)
+    setTimeout(() => setShareCopied(false), 2000)
   }, [inputs])
   
   // Transform simulation results for charts
@@ -1569,6 +1627,7 @@ function HousePageInner() {
       {/* ===== HERO: THE ESSENTIALS ===== */}
       <div 
         key={`hero-${inputs.homePrice}-${inputs.hoaMonthly}-${inputs.units.length}`}
+        data-section="hero"
         className="bg-gradient-to-br from-white/[0.03] to-transparent border border-white/[0.08] rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6"
       >
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -1843,10 +1902,11 @@ function HousePageInner() {
         <div className="mb-4">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
+            data-shortcut="advanced"
             className="flex items-center gap-2 text-white/50 hover:text-white/70 text-sm transition-colors"
           >
             <span className={`transform transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
-            Advanced Settings
+            Advanced Settings <kbd className="ml-2 px-1.5 py-0.5 bg-white/[0.06] rounded text-[10px] text-white/40 hidden md:inline">A</kbd>
           </button>
           
           {showAdvanced && (
@@ -1872,10 +1932,11 @@ function HousePageInner() {
         <div className="mb-4">
           <button
             onClick={() => setShowStrategies(!showStrategies)}
+            data-shortcut="strategies"
             className="flex items-center gap-2 text-white/50 hover:text-white/70 text-sm transition-colors"
           >
             <span className={`transform transition-transform ${showStrategies ? 'rotate-90' : ''}`}>▶</span>
-            Strategies / Scenarios
+            Strategies / Scenarios <kbd className="ml-2 px-1.5 py-0.5 bg-white/[0.06] rounded text-[10px] text-white/40 hidden md:inline">T</kbd>
           </button>
         
         {showStrategies && (
@@ -2056,14 +2117,14 @@ function HousePageInner() {
               Running {inputs.numSimulations.toLocaleString()} simulations...
             </>
           ) : (
-            <>Run Simulation</>
+            <>Run Simulation <kbd className="ml-2 px-2 py-0.5 bg-white/10 rounded text-sm hidden md:inline">R</kbd></>
           )}
         </button>
       </div>
       
       {/* Results */}
       {simResults && (
-        <>
+        <div data-section="results">
           {/* Summary Stats */}
           <Section title="Simulation Results">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
@@ -2553,7 +2614,7 @@ function HousePageInner() {
           
           {/* Math Explained Section */}
           <MathExplained inputs={inputs} simResults={simResults} />
-        </>
+        </div>
       )}
       
       {!simResults && (
@@ -2561,6 +2622,14 @@ function HousePageInner() {
           Configure parameters above and click &quot;Run Simulation&quot; to see Monte Carlo results.
         </div>
       )}
+      
+      {/* Keyboard Shortcuts */}
+      <KeyboardShortcuts
+        onRunSimulation={runSim}
+        onShare={shareUrl}
+        isRunning={isRunning}
+        hasResults={!!simResults}
+      />
     </PageWrapper>
   )
 }
