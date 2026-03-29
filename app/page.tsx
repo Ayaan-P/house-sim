@@ -14,6 +14,7 @@ import {
   runBreakEvenSurface, BreakEvenSurface
 } from '@/lib/monte-carlo'
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
+import { ResultsSkeleton, SimulationProgress } from '@/components/Skeleton'
 
 // Wrapper component to handle searchParams with Suspense
 function HousePageContent() {
@@ -1594,15 +1595,21 @@ function HousePageInner() {
     )
   }
   
-  const Stat = ({ label, value, sub = '', color = 'white' }: {
+  const Stat = ({ label, value, sub = '', color = 'white', delay = 0 }: {
     label: string
     value: string
     sub?: string
     color?: 'white' | 'green' | 'red' | 'blue'
+    delay?: number
   }) => (
-    <div className="bg-white/[0.04]/60 rounded-lg p-3 md:p-4 border border-white/[0.08]/50 min-w-0">
+    <div 
+      className="bg-white/[0.04]/60 rounded-lg p-3 md:p-4 border border-white/[0.08]/50 min-w-0 
+                 transition-all duration-300 hover:bg-white/[0.06] hover:border-white/[0.12]
+                 animate-in fade-in slide-in-from-bottom-2"
+      style={{ animationDelay: `${delay}ms`, animationFillMode: 'backwards' }}
+    >
       <div className="text-white/60 text-[10px] sm:text-xs md:text-sm mb-1 truncate leading-tight">{label}</div>
-      <div className={`text-base sm:text-lg md:text-2xl font-bold font-mono truncate ${color === 'green' ? 'text-green-400' : color === 'red' ? 'text-red-400' : color === 'blue' ? 'text-blue-400' : 'text-white'}`}>
+      <div className={`text-base sm:text-lg md:text-2xl font-bold font-mono truncate transition-colors ${color === 'green' ? 'text-green-400' : color === 'red' ? 'text-red-400' : color === 'blue' ? 'text-blue-400' : 'text-white'}`}>
         {value}
       </div>
       {sub && <div className="text-white/40 text-[10px] sm:text-xs mt-1">{sub}</div>}
@@ -2105,8 +2112,8 @@ function HousePageInner() {
           className="w-full py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 
                      disabled:from-gray-700 disabled:to-gray-600 disabled:cursor-not-allowed
                      rounded-xl text-white font-bold text-base sm:text-lg shadow-lg shadow-blue-900/30
-                     transition-all duration-200 hover:shadow-blue-900/50
-                     flex items-center justify-center gap-2 sm:gap-3"
+                     transition-all duration-200 hover:shadow-blue-900/50 hover:scale-[1.01] active:scale-[0.99]
+                     flex items-center justify-center gap-2 sm:gap-3 group"
         >
           {isRunning ? (
             <>
@@ -2114,17 +2121,20 @@ function HousePageInner() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              Running {inputs.numSimulations.toLocaleString()} simulations...
+              <span className="animate-pulse">Running {inputs.numSimulations.toLocaleString()} simulations...</span>
             </>
           ) : (
-            <>Run Simulation <kbd className="ml-2 px-2 py-0.5 bg-white/10 rounded text-sm hidden md:inline">R</kbd></>
+            <>
+              <span className="group-hover:translate-x-0.5 transition-transform">Run Simulation</span> 
+              <kbd className="ml-2 px-2 py-0.5 bg-white/10 rounded text-sm hidden md:inline group-hover:bg-white/20 transition-colors">R</kbd>
+            </>
           )}
         </button>
       </div>
       
       {/* Results */}
       {simResults && (
-        <div data-section="results">
+        <div data-section="results" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Summary Stats */}
           <Section title="Simulation Results">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
@@ -2133,35 +2143,41 @@ function HousePageInner() {
                 value={formatPercent(simResults.finalStats.buyWinsProbability)}
                 color={simResults.finalStats.buyWinsProbability > 0.5 ? 'green' : 'red'}
                 sub={`${inputs.numSimulations.toLocaleString()} simulations`}
+                delay={0}
               />
               <Stat 
                 label={`Median Delta (Yr ${inputs.years})`}
                 value={formatCurrency(simResults.finalStats.delta.p50)}
                 color={simResults.finalStats.delta.p50 > 0 ? 'green' : 'red'}
                 sub="P50"
+                delay={50}
               />
               <Stat 
                 label="Worst Case Delta" 
                 value={formatCurrency(simResults.finalStats.delta.p10)}
                 sub="P10"
                 color="red"
+                delay={100}
               />
               <Stat 
                 label="Best Case Delta" 
                 value={formatCurrency(simResults.finalStats.delta.p90)}
                 sub="P90"
                 color="green"
+                delay={150}
               />
               <Stat 
                 label="Median Wealth (Buy)" 
                 value={formatCurrency(simResults.finalStats.wealthBuy.p50)}
                 sub="P50"
                 color="blue"
+                delay={200}
               />
               <Stat 
                 label="Median Wealth (Rent)" 
                 value={formatCurrency(simResults.finalStats.wealthRent.p50)}
                 sub="P50"
+                delay={250}
               />
             </div>
           </Section>
@@ -2617,11 +2633,19 @@ function HousePageInner() {
         </div>
       )}
       
-      {!simResults && (
-        <div className="text-center py-12 text-white/40">
+      {/* Loading skeleton while simulation runs */}
+      {isRunning && !simResults && (
+        <ResultsSkeleton />
+      )}
+      
+      {!simResults && !isRunning && (
+        <div className="text-center py-12 text-white/40 animate-in fade-in duration-300">
           Configure parameters above and click &quot;Run Simulation&quot; to see Monte Carlo results.
         </div>
       )}
+      
+      {/* Progress bar at top during simulation */}
+      <SimulationProgress isRunning={isRunning} total={inputs.numSimulations} />
       
       {/* Keyboard Shortcuts */}
       <KeyboardShortcuts
