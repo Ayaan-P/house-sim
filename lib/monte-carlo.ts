@@ -1062,6 +1062,185 @@ export const defaultParams: SimulationParams = {
 }
 
 // ============================================
+// WHAT-IF SENSITIVITY ANALYSIS (Quick view)
+// ============================================
+
+export interface WhatIfScenario {
+  id: string
+  label: string
+  description: string
+  newP50Delta: number
+  newWinRate: number
+  deltaChange: number  // Change from base P50 delta
+  winRateChange: number  // Change from base win rate
+  direction: 'better' | 'worse' | 'neutral'
+}
+
+export interface WhatIfResult {
+  baseP50Delta: number
+  baseWinRate: number
+  scenarios: WhatIfScenario[]
+}
+
+// Quick "what if" scenarios with predefined variations
+export function runWhatIfAnalysis(
+  baseParams: SimulationParams,
+  numSims: number = 1000
+): WhatIfResult {
+  const testParams = { ...baseParams, numSimulations: numSims }
+  
+  // Run base case
+  const baseResult = runSimulation(testParams)
+  const baseP50 = baseResult.finalStats.delta.p50
+  const baseWinRate = baseResult.finalStats.buyWinsProbability
+  
+  // Define what-if scenarios
+  const scenarioDefs: Array<{
+    id: string
+    label: string
+    description: string
+    changes: Partial<SimulationParams>
+  }> = [
+    // Rate scenarios
+    {
+      id: 'rate-down-1',
+      label: 'Rate -1%',
+      description: `Rate drops to ${((baseParams.mortgageRate - 0.01) * 100).toFixed(1)}%`,
+      changes: { mortgageRate: baseParams.mortgageRate - 0.01 },
+    },
+    {
+      id: 'rate-up-1',
+      label: 'Rate +1%',
+      description: `Rate rises to ${((baseParams.mortgageRate + 0.01) * 100).toFixed(1)}%`,
+      changes: { mortgageRate: baseParams.mortgageRate + 0.01 },
+    },
+    // Down payment scenarios
+    {
+      id: 'down-plus-5',
+      label: 'Down +5%',
+      description: `Put ${baseParams.downPaymentPercent + 5}% down`,
+      changes: { downPaymentPercent: Math.min(50, baseParams.downPaymentPercent + 5) },
+    },
+    {
+      id: 'down-minus-5',
+      label: 'Down -5%',
+      description: `Put ${Math.max(3, baseParams.downPaymentPercent - 5)}% down`,
+      changes: { downPaymentPercent: Math.max(3, baseParams.downPaymentPercent - 5) },
+    },
+    // Price scenarios
+    {
+      id: 'price-down-10',
+      label: 'Price -10%',
+      description: `Buy at $${Math.round(baseParams.homePrice * 0.9).toLocaleString()}`,
+      changes: { homePrice: baseParams.homePrice * 0.9 },
+    },
+    {
+      id: 'price-up-10',
+      label: 'Price +10%',
+      description: `Buy at $${Math.round(baseParams.homePrice * 1.1).toLocaleString()}`,
+      changes: { homePrice: baseParams.homePrice * 1.1 },
+    },
+    // Appreciation scenarios
+    {
+      id: 'appr-low',
+      label: 'Appr 3%',
+      description: 'Slower appreciation (3%/yr)',
+      changes: { appreciationMean: 0.03 },
+    },
+    {
+      id: 'appr-high',
+      label: 'Appr 7%',
+      description: 'Faster appreciation (7%/yr)',
+      changes: { appreciationMean: 0.07 },
+    },
+    // Stock return scenarios
+    {
+      id: 'stock-low',
+      label: 'Stocks 6%',
+      description: 'Lower stock returns (6%/yr)',
+      changes: { stockReturnMean: 0.06 },
+    },
+    {
+      id: 'stock-high',
+      label: 'Stocks 12%',
+      description: 'Higher stock returns (12%/yr)',
+      changes: { stockReturnMean: 0.12 },
+    },
+    // Hold period scenarios
+    {
+      id: 'years-5',
+      label: '5 Years',
+      description: 'Sell after 5 years',
+      changes: { years: 5 },
+    },
+    {
+      id: 'years-15',
+      label: '15 Years',
+      description: 'Hold for 15 years',
+      changes: { years: 15 },
+    },
+  ]
+  
+  // Add rental income scenarios only if house hacking
+  if (baseParams.houseHack || baseParams.units.length > 0) {
+    const currentRentalIncome = baseParams.units.length > 0
+      ? baseParams.units.filter(u => !u.ownerOccupied).reduce((sum, u) => sum + u.monthlyRent, 0)
+      : baseParams.rentalIncome
+    
+    if (currentRentalIncome > 0) {
+      scenarioDefs.push({
+        id: 'rental-down-20',
+        label: 'Rent -20%',
+        description: `Rental income $${Math.round(currentRentalIncome * 0.8).toLocaleString()}/mo`,
+        changes: baseParams.units.length > 0
+          ? { units: baseParams.units.map(u => u.ownerOccupied ? u : { ...u, monthlyRent: u.monthlyRent * 0.8 }) }
+          : { rentalIncome: baseParams.rentalIncome * 0.8 },
+      })
+      scenarioDefs.push({
+        id: 'rental-up-20',
+        label: 'Rent +20%',
+        description: `Rental income $${Math.round(currentRentalIncome * 1.2).toLocaleString()}/mo`,
+        changes: baseParams.units.length > 0
+          ? { units: baseParams.units.map(u => u.ownerOccupied ? u : { ...u, monthlyRent: u.monthlyRent * 1.2 }) }
+          : { rentalIncome: baseParams.rentalIncome * 1.2 },
+      })
+    }
+  }
+  
+  // Run each scenario
+  const scenarios: WhatIfScenario[] = []
+  
+  for (const def of scenarioDefs) {
+    const scenarioParams = { ...testParams, ...def.changes }
+    const result = runSimulation(scenarioParams)
+    const newP50 = result.finalStats.delta.p50
+    const newWinRate = result.finalStats.buyWinsProbability
+    const deltaChange = newP50 - baseP50
+    const winRateChange = newWinRate - baseWinRate
+    
+    scenarios.push({
+      id: def.id,
+      label: def.label,
+      description: def.description,
+      newP50Delta: newP50,
+      newWinRate,
+      deltaChange,
+      winRateChange,
+      direction: deltaChange > 5000 ? 'better' : deltaChange < -5000 ? 'worse' : 'neutral',
+    })
+  }
+  
+  // Sort by absolute impact (biggest changes first)
+  scenarios.sort((a, b) => Math.abs(b.deltaChange) - Math.abs(a.deltaChange))
+  
+  return {
+    baseP50Delta: baseP50,
+    baseWinRate,
+    scenarios,
+  }
+}
+
+// ============================================
 // SENSITIVITY ANALYSIS
 // ============================================
 

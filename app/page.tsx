@@ -11,7 +11,8 @@ import {
   runSimulation, defaultParams, SimulationParams, SimulationSummary, SimulationRun,
   Unit, createMultiFamilyUnits, getUnitSummary,
   runSensitivityAnalysis, SensitivityResult,
-  runBreakEvenSurface, BreakEvenSurface
+  runBreakEvenSurface, BreakEvenSurface,
+  runWhatIfAnalysis, WhatIfResult, WhatIfScenario
 } from '@/lib/monte-carlo'
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
 import { ResultsSkeleton, SimulationProgress } from '@/components/Skeleton'
@@ -1236,8 +1237,10 @@ function HousePageInner() {
   // Advanced analysis state
   const [sensitivityResults, setSensitivityResults] = useState<SensitivityResult[] | null>(null)
   const [breakEvenSurface, setBreakEvenSurface] = useState<BreakEvenSurface | null>(null)
+  const [whatIfResults, setWhatIfResults] = useState<WhatIfResult | null>(null)
   const [isRunningSensitivity, setIsRunningSensitivity] = useState(false)
   const [isRunningBreakEven, setIsRunningBreakEven] = useState(false)
+  const [isRunningWhatIf, setIsRunningWhatIf] = useState(false)
   
   // Collapsible state (must be before URL parsing useEffect)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -2476,7 +2479,94 @@ function HousePageInner() {
                   <>📊 Break-Even Surface</>
                 )}
               </button>
+              
+              <button
+                onClick={() => {
+                  setIsRunningWhatIf(true)
+                  setTimeout(() => {
+                    const results = runWhatIfAnalysis(inputs, 1000)
+                    setWhatIfResults(results)
+                    setIsRunningWhatIf(false)
+                  }, 50)
+                }}
+                disabled={isRunningWhatIf}
+                className="px-3 sm:px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:cursor-not-allowed
+                           rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
+              >
+                {isRunningWhatIf ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Running...
+                  </>
+                ) : (
+                  <>🤔 What If?</>
+                )}
+              </button>
             </div>
+            
+            {/* What-If Sensitivity Results */}
+            {whatIfResults && (
+              <div className="mb-8">
+                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">🤔 What If? Scenarios</h4>
+                <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
+                  How do common changes affect your outcome? Base case: <span className="text-white">{formatCurrency(whatIfResults.baseP50Delta)}</span> median delta, <span className="text-white">{formatPercent(whatIfResults.baseWinRate)}</span> buy wins.
+                </p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {whatIfResults.scenarios.map((scenario) => {
+                    const bgColor = scenario.direction === 'better' 
+                      ? 'bg-green-900/20 border-green-500/30 hover:border-green-500/50' 
+                      : scenario.direction === 'worse'
+                        ? 'bg-red-900/20 border-red-500/30 hover:border-red-500/50'
+                        : 'bg-white/[0.02] border-white/[0.08] hover:border-white/20'
+                    
+                    const deltaColor = scenario.deltaChange > 0 ? 'text-green-400' : scenario.deltaChange < 0 ? 'text-red-400' : 'text-white/60'
+                    const winRateColor = scenario.winRateChange > 0.02 ? 'text-green-400' : scenario.winRateChange < -0.02 ? 'text-red-400' : 'text-white/60'
+                    
+                    return (
+                      <div 
+                        key={scenario.id}
+                        className={`p-3 sm:p-4 rounded-xl border transition-colors ${bgColor}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-white text-sm sm:text-base">{scenario.label}</span>
+                          <span className={`text-xs sm:text-sm font-mono ${deltaColor}`}>
+                            {scenario.deltaChange >= 0 ? '+' : ''}{formatCurrency(scenario.deltaChange)}
+                          </span>
+                        </div>
+                        <div className="text-white/50 text-xs sm:text-sm mb-2">{scenario.description}</div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-white/40">
+                            P50: <span className="text-white/70">{formatCurrency(scenario.newP50Delta)}</span>
+                          </span>
+                          <span className={winRateColor}>
+                            Win: {formatPercent(scenario.newWinRate)} ({scenario.winRateChange >= 0 ? '+' : ''}{(scenario.winRateChange * 100).toFixed(1)}%)
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                
+                <div className="mt-4 flex items-center gap-4 text-xs text-white/40">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded bg-green-500/30 border border-green-500/50" />
+                    <span>Better for buying</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded bg-red-500/30 border border-red-500/50" />
+                    <span>Worse for buying</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded bg-white/10 border border-white/20" />
+                    <span>Minimal impact</span>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Sensitivity Analysis Results (Tornado Chart) */}
             {sensitivityResults && (
