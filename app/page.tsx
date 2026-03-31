@@ -16,6 +16,7 @@ import {
 } from '@/lib/monte-carlo'
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
 import { ResultsSkeleton, SimulationProgress } from '@/components/Skeleton'
+import { NationalComparison } from '@/components/NationalComparison'
 
 // Wrapper component to handle searchParams with Suspense
 function HousePageContent() {
@@ -2720,6 +2721,11 @@ function HousePageInner() {
           
           {/* Math Explained Section */}
           <MathExplained inputs={inputs} simResults={simResults} />
+          
+          {/* National Comparison Section */}
+          <Section title="🇺🇸 Market Context">
+            <NationalComparison userParams={inputs} userResults={simResults} />
+          </Section>
         </div>
       )}
       
