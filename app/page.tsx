@@ -950,7 +950,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
           
           {/* Disclaimer */}
           <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl text-xs text-white/40">
-            <strong className="text-white/60">⚠️ Important Caveats:</strong>
+            <strong className="text-white/60">Important Caveats:</strong>
             <ul className="mt-2 space-y-1 list-disc list-inside">
               <li>This assumes you stay the full {inputs.years} years. Selling early typically favors renting.</li>
               <li>Real returns have "fat tails" — extreme outcomes (crashes, booms) happen more than normal distributions suggest.</li>
@@ -1544,9 +1544,9 @@ function HousePageInner() {
     
     return (
       <div className="mb-4 relative">
-        <label className="block text-sm font-medium text-white/70 mb-1.5">
+        <label className="block text-sm font-medium text-[var(--content-muted)] mb-1.5">
           {label}
-          {hint && <span className="text-white/40 font-normal ml-1">({hint})</span>}
+          {hint && <span className="text-[var(--content-subtle)] font-normal ml-1">({hint})</span>}
           {tooltip && (
             <button
               type="button"
@@ -1554,20 +1554,21 @@ function HousePageInner() {
                 e.preventDefault()
                 setActiveTooltip(activeTooltip === label ? null : label)
               }}
-              className="ml-1 text-white/40 hover:text-white/70 text-xs"
+              className="ml-1 text-[var(--content-subtle)] hover:text-[var(--content-muted)] transition-colors"
+              aria-label={`Show info for ${label}`}
             >
-              ⓘ
+              <span className="icon-info" aria-hidden="true">i</span>
             </button>
           )}
         </label>
         {tooltip && activeTooltip === label && (
-          <div className="absolute z-10 top-6 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">
+          <div className="themed-tooltip absolute z-10 top-6 left-0 right-0 p-2 border rounded-lg text-xs shadow-lg">
             {tooltip}
           </div>
         )}
         <div className="relative">
           {prefix && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60">{prefix}</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--content-subtle)]">{prefix}</span>
           )}
           <input
             type="text"
@@ -1581,13 +1582,13 @@ function HousePageInner() {
                 ;(e.target as HTMLInputElement).blur()
               }
             }}
-            className={`w-full bg-[#0d0d0d] border rounded-lg px-4 py-2.5 text-white text-base font-mono
-                       focus:ring-1 focus:outline-none hover:border-gray-500 transition-colors
-                       ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-600 focus:border-blue-500 focus:ring-blue-500'}
+            className={`themed-input w-full border rounded-lg px-4 py-2.5 text-base font-mono
+                       focus:ring-1 focus:outline-none transition-colors
+                       ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'focus:border-[var(--accent)] focus:ring-[var(--accent)]'}
                        ${prefix ? 'pl-8' : ''} ${suffix ? 'pr-12' : ''}`}
           />
           {suffix && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 font-medium">{suffix}</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--content-subtle)] font-medium">{suffix}</span>
           )}
         </div>
         {error && (
@@ -1644,13 +1645,13 @@ function HousePageInner() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Price */}
           <div className="relative">
-            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+            <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
               Price
-              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'price' ? null : 'price')} className="text-white/40 hover:text-white/70">ⓘ</button>
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'price' ? null : 'price')} className="text-[var(--content-subtle)] hover:text-[var(--content-muted)] transition-colors" aria-label="Show info for Price"><span className="icon-info" aria-hidden="true">i</span></button>
             </label>
-            {activeTooltip === 'price' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">Purchase price of the property</div>}
+            {activeTooltip === 'price' && <div className="themed-tooltip absolute z-10 top-5 left-0 right-0 p-2 border rounded-lg text-xs shadow-lg">Purchase price of the property</div>}
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--content-subtle)]">$</span>
               <input
                 type="text"
                 key={inputs.homePrice}
@@ -1663,7 +1664,7 @@ function HousePageInner() {
                     if (clamped !== v) e.target.value = String(clamped)
                   }
                 }}
-                className={`w-full pl-7 pr-3 py-2 sm:py-3 bg-black/40 border rounded-xl text-white text-base sm:text-lg font-mono focus:outline-none ${validationErrors['price'] ? 'border-red-500 focus:border-red-500' : 'border-white/10 focus:border-[#84BABF]'}`}
+                className={`themed-input w-full pl-7 pr-3 py-2 sm:py-3 border rounded-xl text-base sm:text-lg font-mono focus:outline-none ${validationErrors['price'] ? 'border-red-500 focus:border-red-500' : 'focus:border-[var(--accent)]'}`}
               />
             </div>
             {validationErrors['price'] && <div className="absolute -bottom-4 left-0 text-xs text-red-400">{validationErrors['price']}</div>}
@@ -1671,11 +1672,11 @@ function HousePageInner() {
           
           {/* Down Payment */}
           <div className="relative">
-            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+            <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
               Down
-              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'down' ? null : 'down')} className="text-white/40 hover:text-white/70">ⓘ</button>
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'down' ? null : 'down')} className="text-[var(--content-subtle)] hover:text-[var(--content-muted)] transition-colors" aria-label="Show info for Down"><span className="icon-info" aria-hidden="true">i</span></button>
             </label>
-            {activeTooltip === 'down' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">Down payment %. FTHB programs allow 3-5%.</div>}
+            {activeTooltip === 'down' && <div className="themed-tooltip absolute z-10 top-5 left-0 right-0 p-2 border rounded-lg text-xs shadow-lg">Down payment %. FTHB programs allow 3-5%.</div>}
             <div className="relative">
               <input
                 type="text"
@@ -1689,19 +1690,19 @@ function HousePageInner() {
                     if (clamped !== v) e.target.value = String(clamped)
                   }
                 }}
-                className="w-full pl-3 pr-8 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg font-mono focus:border-[#84BABF] focus:outline-none"
+                className="themed-input w-full pl-3 pr-8 py-2 sm:py-3 border rounded-xl text-base sm:text-lg font-mono focus:outline-none"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">%</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--content-subtle)]">%</span>
             </div>
           </div>
           
           {/* Rate */}
           <div className="relative">
-            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+            <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
               Rate
-              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'rate' ? null : 'rate')} className="text-white/40 hover:text-white/70">ⓘ</button>
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'rate' ? null : 'rate')} className="text-[var(--content-subtle)] hover:text-[var(--content-muted)] transition-colors" aria-label="Show info for Rate"><span className="icon-info" aria-hidden="true">i</span></button>
             </label>
-            {activeTooltip === 'rate' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">Mortgage interest rate (30-year fixed)</div>}
+            {activeTooltip === 'rate' && <div className="themed-tooltip absolute z-10 top-5 left-0 right-0 p-2 border rounded-lg text-xs shadow-lg">Mortgage interest rate (30-year fixed)</div>}
             <div className="relative">
               <input
                 type="text"
@@ -1715,21 +1716,21 @@ function HousePageInner() {
                     if (clamped !== v) e.target.value = clamped.toFixed(2)
                   }
                 }}
-                className="w-full pl-3 pr-8 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg font-mono focus:border-[#84BABF] focus:outline-none"
+                className="themed-input w-full pl-3 pr-8 py-2 sm:py-3 border rounded-xl text-base sm:text-lg font-mono focus:outline-none"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">%</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--content-subtle)]">%</span>
             </div>
           </div>
           
           {/* Your Rent */}
           <div className="relative">
-            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+            <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
               Your Rent
-              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'rent' ? null : 'rent')} className="text-white/40 hover:text-white/70">ⓘ</button>
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'rent' ? null : 'rent')} className="text-[var(--content-subtle)] hover:text-[var(--content-muted)] transition-colors" aria-label="Show info for Your Rent"><span className="icon-info" aria-hidden="true">i</span></button>
             </label>
-            {activeTooltip === 'rent' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">What you currently pay. Used to calculate opportunity cost.</div>}
+            {activeTooltip === 'rent' && <div className="themed-tooltip absolute z-10 top-5 left-0 right-0 p-2 border rounded-lg text-xs shadow-lg">What you currently pay. Used to calculate opportunity cost.</div>}
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--content-subtle)]">$</span>
               <input
                 type="text"
                 key={inputs.currentRent}
@@ -1742,18 +1743,18 @@ function HousePageInner() {
                     if (clamped !== v) e.target.value = String(clamped)
                   }
                 }}
-                className="w-full pl-7 pr-3 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg font-mono focus:border-[#84BABF] focus:outline-none"
+                className="themed-input w-full pl-7 pr-3 py-2 sm:py-3 border rounded-xl text-base sm:text-lg font-mono focus:outline-none"
               />
             </div>
           </div>
           
           {/* Years */}
           <div className="relative">
-            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+            <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
               Years
-              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'years' ? null : 'years')} className="text-white/40 hover:text-white/70">ⓘ</button>
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'years' ? null : 'years')} className="text-[var(--content-subtle)] hover:text-[var(--content-muted)] transition-colors" aria-label="Show info for Years"><span className="icon-info" aria-hidden="true">i</span></button>
             </label>
-            {activeTooltip === 'years' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">How long you plan to hold. Longer = more likely buying wins.</div>}
+            {activeTooltip === 'years' && <div className="themed-tooltip absolute z-10 top-5 left-0 right-0 p-2 border rounded-lg text-xs shadow-lg">How long you plan to hold. Longer = more likely buying wins.</div>}
             <div className="relative">
               <input
                 type="text"
@@ -1767,23 +1768,23 @@ function HousePageInner() {
                     if (clamped !== v) e.target.value = String(clamped)
                   }
                 }}
-                className="w-full pl-3 pr-8 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg font-mono focus:border-[#84BABF] focus:outline-none"
+                className="themed-input w-full pl-3 pr-8 py-2 sm:py-3 border rounded-xl text-base sm:text-lg font-mono focus:outline-none"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">yr</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--content-subtle)]">yr</span>
             </div>
           </div>
           
           {/* Closing Month */}
           <div className="relative">
-            <label className="flex items-center gap-1 text-xs text-white/50 mb-1">
+            <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
               Close
-              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'close' ? null : 'close')} className="text-white/40 hover:text-white/70">ⓘ</button>
+              <button type="button" onClick={() => setActiveTooltip(activeTooltip === 'close' ? null : 'close')} className="text-[var(--content-subtle)] hover:text-[var(--content-muted)] transition-colors" aria-label="Show info for Close"><span className="icon-info" aria-hidden="true">i</span></button>
             </label>
-            {activeTooltip === 'close' && <div className="absolute z-10 top-5 left-0 right-0 p-2 bg-gray-900 border border-white/20 rounded-lg text-xs text-white/80 shadow-lg">Month you close. Year 1 is prorated.</div>}
+            {activeTooltip === 'close' && <div className="themed-tooltip absolute z-10 top-5 left-0 right-0 p-2 border rounded-lg text-xs shadow-lg">Month you close. Year 1 is prorated.</div>}
             <select
               value={inputs.closingMonth || 1}
               onChange={(e) => update('closingMonth', parseInt(e.target.value))}
-              className="w-full px-3 py-2 sm:py-3 bg-black/40 border border-white/10 rounded-xl text-white text-base sm:text-lg focus:border-[#84BABF] focus:outline-none"
+              className="themed-input w-full px-3 py-2 sm:py-3 border rounded-xl text-base sm:text-lg focus:outline-none"
             >
               {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
                 <option key={m} value={i + 1}>{m}</option>
@@ -1842,7 +1843,7 @@ function HousePageInner() {
           <div className="flex items-center gap-4 p-3 bg-white/[0.02] rounded-lg mb-4">
             <span className="text-white/50 text-sm">Rental income:</span>
             <div className="relative w-32">
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--content-subtle)] text-sm">$</span>
               <input
                 type="text"
                 key={inputs.rentalIncome}
@@ -1855,7 +1856,7 @@ function HousePageInner() {
                     if (clamped !== v) e.target.value = String(clamped)
                   }
                 }}
-                className="w-full pl-6 pr-2 py-1.5 bg-black/40 border border-white/10 rounded-lg text-white font-mono text-sm"
+                className="themed-input w-full pl-6 pr-2 py-1.5 border rounded-lg font-mono text-sm"
               />
             </div>
             <span className="text-white/30 text-sm">/mo</span>
@@ -1880,11 +1881,11 @@ function HousePageInner() {
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-white/70 text-sm">{unit.beds}BR/{unit.baths}BA</span>
-                  {unit.ownerOccupied && <span className="text-green-400 text-xs">🏠 You</span>}
+                  {unit.ownerOccupied && <span className="rounded-full border border-green-500/40 bg-green-500/10 px-2 py-0.5 text-green-400 text-xs">You</span>}
                 </div>
                 {!unit.ownerOccupied && (
                   <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-white/40 text-xs">$</span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--content-subtle)] text-xs">$</span>
                     <input
                       type="text"
                       key={unit.monthlyRent}
@@ -1900,7 +1901,7 @@ function HousePageInner() {
                           if (clamped !== v) e.target.value = String(clamped)
                         }
                       }}
-                      className="w-full pl-5 pr-2 py-1 bg-black/40 border border-white/10 rounded text-green-400 font-mono text-sm"
+                      className="themed-input w-full pl-5 pr-2 py-1 border rounded text-green-400 font-mono text-sm"
                     />
                   </div>
                 )}
@@ -1916,7 +1917,7 @@ function HousePageInner() {
             data-shortcut="advanced"
             className="flex items-center gap-2 text-white/50 hover:text-white/70 text-sm transition-colors"
           >
-            <span className={`transform transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
+            <span className={`icon-disclosure transition-transform ${showAdvanced ? 'rotate-90' : ''}`} aria-hidden="true" />
             Advanced Settings <kbd className="ml-2 px-1.5 py-0.5 bg-white/[0.06] rounded text-[10px] text-white/40 hidden md:inline">A</kbd>
           </button>
           
@@ -1946,7 +1947,7 @@ function HousePageInner() {
             data-shortcut="strategies"
             className="flex items-center gap-2 text-white/50 hover:text-white/70 text-sm transition-colors"
           >
-            <span className={`transform transition-transform ${showStrategies ? 'rotate-90' : ''}`}>▶</span>
+            <span className={`icon-disclosure transition-transform ${showStrategies ? 'rotate-90' : ''}`} aria-hidden="true" />
             Strategies / Scenarios <kbd className="ml-2 px-1.5 py-0.5 bg-white/[0.06] rounded text-[10px] text-white/40 hidden md:inline">T</kbd>
           </button>
         
@@ -2270,7 +2271,7 @@ function HousePageInner() {
           </Section>
           
           {/* Interactive Monte Carlo Histogram */}
-          <Section title="📊 Final Outcome Distribution (Interactive)">
+          <Section title="Final Outcome Distribution (Interactive)">
             <DeltaHistogram 
               runs={simResults.runs} 
               finalStats={simResults.finalStats}
@@ -2312,7 +2313,7 @@ function HousePageInner() {
           )}
           
           {/* Detailed Table */}
-          <Section title="📅 Year-by-Year Percentiles">
+          <Section title="Year-by-Year Percentiles">
             {/* Mobile view: simplified card layout */}
             <div className="md:hidden space-y-2">
               {simResults.yearlyStats.map((y) => (
@@ -2402,7 +2403,7 @@ function HousePageInner() {
           </Section>
           
           {/* Interpretation */}
-          <Section title="📝 Interpretation">
+          <Section title="Interpretation">
             <div className="text-sm space-y-2">
               <p>
                 <strong>Probability Buy Wins:</strong> {formatPercent(simResults.finalStats.buyWinsProbability)} — 
@@ -2427,7 +2428,7 @@ function HousePageInner() {
           </Section>
           
           {/* Advanced Analysis Section */}
-          <Section title="🔬 Advanced Analysis">
+          <Section title="Advanced Analysis">
             <div className="flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6">
               <button
                 onClick={() => {
@@ -2451,7 +2452,7 @@ function HousePageInner() {
                     Running...
                   </>
                 ) : (
-                  <>🌪️ <span className="hidden xs:inline">Sensitivity</span><span className="xs:hidden">Sens.</span> Analysis</>
+                  <><span className="hidden xs:inline">Sensitivity</span><span className="xs:hidden">Sens.</span> Analysis</>
                 )}
               </button>
               
@@ -2477,7 +2478,7 @@ function HousePageInner() {
                     Running...
                   </>
                 ) : (
-                  <>📊 Break-Even Surface</>
+                  <>Break-Even Surface</>
                 )}
               </button>
               
@@ -2503,7 +2504,7 @@ function HousePageInner() {
                     Running...
                   </>
                 ) : (
-                  <>🤔 What If?</>
+                  <>What If?</>
                 )}
               </button>
             </div>
@@ -2511,7 +2512,7 @@ function HousePageInner() {
             {/* What-If Sensitivity Results */}
             {whatIfResults && (
               <div className="mb-8">
-                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">🤔 What If? Scenarios</h4>
+                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">What If? Scenarios</h4>
                 <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
                   How do common changes affect your outcome? Base case: <span className="text-white">{formatCurrency(whatIfResults.baseP50Delta)}</span> median delta, <span className="text-white">{formatPercent(whatIfResults.baseWinRate)}</span> buy wins.
                 </p>
@@ -2572,7 +2573,7 @@ function HousePageInner() {
             {/* Sensitivity Analysis Results (Tornado Chart) */}
             {sensitivityResults && (
               <div className="mb-8">
-                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">🌪️ Sensitivity Analysis</h4>
+                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">Sensitivity Analysis</h4>
                 <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
                   Which inputs swing the outcome most? Bars show P50 delta change when varying each parameter ±10-20%.
                 </p>
@@ -2625,7 +2626,7 @@ function HousePageInner() {
             {/* Break-Even Surface (Heatmap) */}
             {breakEvenSurface && (
               <div>
-                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">📊 Break-Even Surface</h4>
+                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">Break-Even Surface</h4>
                 <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
                   Win probability (buy vs rent) across {breakEvenSurface.xLabel} × {breakEvenSurface.yLabel}. 
                   Green = buy wins, Red = rent wins, Yellow = break-even.

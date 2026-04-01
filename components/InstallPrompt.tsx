@@ -56,14 +56,14 @@ export function InstallPrompt() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:max-w-sm animate-slide-up">
-      <div className="bg-gray-900/95 backdrop-blur-lg border border-white/10 rounded-2xl p-4 shadow-xl">
+      <div className="bg-[var(--surface-raised)]/95 backdrop-blur-lg border border-[var(--border)] rounded-2xl p-4 shadow-xl">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-xl shrink-0">
-            🏠
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-xs font-semibold text-white shrink-0">
+            HS
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-white font-semibold text-sm">Install HouseSim</h3>
-            <p className="text-white/60 text-xs mt-0.5">
+            <h3 className="text-[var(--content)] font-semibold text-sm">Install HouseSim</h3>
+            <p className="text-[var(--content-muted)] text-xs mt-0.5">
               Add to home screen for quick access & offline use
             </p>
           </div>
@@ -71,7 +71,7 @@ export function InstallPrompt() {
         <div className="flex gap-2 mt-3">
           <button
             onClick={handleDismiss}
-            className="flex-1 py-2 text-sm text-white/60 hover:text-white transition-colors"
+            className="flex-1 py-2 text-sm text-[var(--content-muted)] hover:text-[var(--content)] transition-colors"
           >
             Not now
           </button>
