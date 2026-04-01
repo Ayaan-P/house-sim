@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useMemo, useCallback, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { PageWrapper, Header, Section } from '@/components/layout'
@@ -1631,9 +1632,12 @@ function HousePageInner() {
   return (
     <PageWrapper>
       <Header title="House vs Rent Simulator">
-        <a href="/listings" className="text-[#84BABF] hover:text-[#84BABF]/80 text-sm transition-colors">
+        <Link href="/areas" className="text-[var(--accent)] hover:text-[var(--accent-hover)] text-sm transition-colors">
+          Areas
+        </Link>
+        <Link href="/listings" className="text-[var(--accent)] hover:text-[var(--accent-hover)] text-sm transition-colors">
           Listings →
-        </a>
+        </Link>
       </Header>
       
       {/* ===== HERO: THE ESSENTIALS ===== */}
