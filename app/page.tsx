@@ -28,7 +28,7 @@ export default function HousePage() {
     <Suspense fallback={
       <PageWrapper>
         <Header title="House Monte Carlo Simulation" />
-        <div className="text-center py-12 text-white/40">Loading...</div>
+        <div className="text-center py-12 text-[var(--content-subtle)]">Loading...</div>
       </PageWrapper>
     }>
       <HousePageContent />
@@ -566,16 +566,16 @@ Primary Residence Exemption,$250k/$500k,Section 121
       <div className="flex gap-2">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex-1 text-left flex items-center justify-between p-4 bg-white/[0.02] rounded-xl border border-white/[0.08] hover:border-white/20 transition-colors"
+          className="flex-1 text-left flex items-center justify-between p-4 bg-[var(--surface)] rounded-xl border border-[var(--border)] hover:border-[var(--border)] transition-colors"
         >
-          <span className="text-white/70">
+          <span className="text-[var(--content-muted)]">
             {isExpanded ? 'Click to collapse' : 'Click to see step-by-step calculations with your numbers'}
           </span>
-          <span className={`transform transition-transform text-white/50 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+          <span className={`transform transition-transform text-[var(--content-subtle)] ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
         </button>
         <button
           onClick={shareUrl}
-          className={`px-4 py-2 ${copied ? 'bg-green-600' : 'bg-purple-600 hover:bg-purple-700'} text-white rounded-xl border ${copied ? 'border-green-500' : 'border-purple-500'} transition-colors flex items-center gap-2`}
+          className={`px-4 py-2 ${copied ? 'bg-green-600' : 'bg-purple-600 hover:bg-purple-700'} text-[var(--content)] rounded-xl border ${copied ? 'border-green-500' : 'border-purple-500'} transition-colors flex items-center gap-2`}
           title="Copy shareable link"
         >
           <span>{copied ? '✓' : '🔗'}</span>
@@ -583,7 +583,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
         </button>
         <button
           onClick={exportMath}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl border border-blue-500 transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-[var(--content)] rounded-xl border border-blue-500 transition-colors flex items-center gap-2"
           title="Export calculations as Markdown"
         >
           <span>MD</span>
@@ -591,7 +591,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
         </button>
         <button
           onClick={exportCSV}
-          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl border border-green-500 transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-[var(--content)] rounded-xl border border-green-500 transition-colors flex items-center gap-2"
           title="Export as CSV with formulas for Google Sheets"
         >
           <span>CSV</span>
@@ -605,16 +605,16 @@ Primary Residence Exemption,$250k/$500k,Section 121
           {/* Step 1: Upfront Costs */}
           <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl">
             <h4 className="text-blue-400 font-bold mb-3">Step 1: What You Pay Upfront</h4>
-            <div className="space-y-2 text-white/80">
+            <div className="space-y-2 text-[var(--content-muted)]">
               <div className="flex justify-between">
                 <span>Home Price</span>
                 <span className="font-mono">{formatCurrency(inputs.homePrice)}</span>
               </div>
-              <div className="flex justify-between pl-4 text-white/60">
+              <div className="flex justify-between pl-4 text-[var(--content-subtle)]">
                 <span>Down Payment ({inputs.downPaymentPercent}%)</span>
                 <span className="font-mono">− {formatCurrency(downPayment)}</span>
               </div>
-              <div className="flex justify-between border-t border-white/10 pt-2">
+              <div className="flex justify-between border-t border-[var(--border)] pt-2">
                 <span>Loan Amount</span>
                 <span className="font-mono font-bold">{formatCurrency(loanAmount)}</span>
               </div>
@@ -622,12 +622,12 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 <span>Closing Costs ({inputs.closingCostPercent}%)</span>
                 <span className="font-mono">{formatCurrency(closingCosts)}</span>
               </div>
-              <div className="flex justify-between border-t border-white/10 pt-2 text-blue-400">
+              <div className="flex justify-between border-t border-[var(--border)] pt-2 text-blue-400">
                 <span className="font-bold">Total Cash Needed</span>
                 <span className="font-mono font-bold">{formatCurrency(totalUpfront)}</span>
               </div>
             </div>
-            <p className="mt-3 text-xs text-white/50">
+            <p className="mt-3 text-xs text-[var(--content-subtle)]">
               💡 This is the capital you need to buy. If renting, this money goes into the stock market instead.
             </p>
           </div>
@@ -635,8 +635,8 @@ Primary Residence Exemption,$250k/$500k,Section 121
           {/* Step 2: Monthly Mortgage */}
           <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-xl">
             <h4 className="text-purple-400 font-bold mb-3">Step 2: Your Mortgage Payment</h4>
-            <div className="space-y-2 text-white/80">
-              <div className="text-white/50 text-xs mb-2">
+            <div className="space-y-2 text-[var(--content-muted)]">
+              <div className="text-[var(--content-subtle)] text-xs mb-2">
                 Formula: P = L × [r(1+r)ⁿ] / [(1+r)ⁿ - 1]
                 <br />
                 Where L = loan, r = monthly rate, n = payments
@@ -653,16 +653,16 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 <span>Number of Payments (n = 30 years × 12)</span>
                 <span className="font-mono">360</span>
               </div>
-              <div className="flex justify-between border-t border-white/10 pt-2 text-purple-400">
+              <div className="flex justify-between border-t border-[var(--border)] pt-2 text-purple-400">
                 <span className="font-bold">Monthly P&I Payment</span>
                 <span className="font-mono font-bold">{formatCurrency(monthlyPI)}/mo</span>
               </div>
-              <div className="flex justify-between text-white/60">
+              <div className="flex justify-between text-[var(--content-subtle)]">
                 <span>Annual P&I</span>
                 <span className="font-mono">{formatCurrency(annualPI)}/yr</span>
               </div>
             </div>
-            <p className="mt-3 text-xs text-white/50">
+            <p className="mt-3 text-xs text-[var(--content-subtle)]">
               💡 In Year 1, ~{(0.85 * 100).toFixed(0)}% ({formatCurrency(year1Interest)}) goes to interest, only ~{(0.15 * 100).toFixed(0)}% ({formatCurrency(year1Principal)}) builds equity.
             </p>
           </div>
@@ -670,7 +670,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
           {/* Step 3: Total Annual Costs */}
           <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl">
             <h4 className="text-red-400 font-bold mb-3">Step 3: Total Cost of Owning (Year 1)</h4>
-            <div className="space-y-2 text-white/80">
+            <div className="space-y-2 text-[var(--content-muted)]">
               <div className="flex justify-between">
                 <span>Mortgage (P&I)</span>
                 <span className="font-mono">{formatCurrency(annualPI)}</span>
@@ -699,7 +699,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                   <span className="font-mono">{formatCurrency(annualPMI)}</span>
                 </div>
               )}
-              <div className="flex justify-between border-t border-white/10 pt-2">
+              <div className="flex justify-between border-t border-[var(--border)] pt-2">
                 <span className="font-bold">Gross Annual Cost</span>
                 <span className="font-mono font-bold">{formatCurrency(totalAnnualCostBuy)}</span>
               </div>
@@ -718,11 +718,11 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 </div>
               )}
               
-              <div className="flex justify-between border-t border-white/10 pt-2 text-red-400">
+              <div className="flex justify-between border-t border-[var(--border)] pt-2 text-red-400">
                 <span className="font-bold">Net Annual Cost (Buying)</span>
                 <span className="font-mono font-bold">{formatCurrency(netCostBuy)}</span>
               </div>
-              <div className="flex justify-between text-white/60">
+              <div className="flex justify-between text-[var(--content-subtle)]">
                 <span>Monthly</span>
                 <span className="font-mono">{formatCurrency(netCostBuy / 12)}/mo</span>
               </div>
@@ -732,15 +732,15 @@ Primary Residence Exemption,$250k/$500k,Section 121
           {/* Step 4: Tax Math */}
           <div className="p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
             <h4 className="text-yellow-400 font-bold mb-3">Step 4: Tax Deductions Explained</h4>
-            <div className="space-y-2 text-white/80">
+            <div className="space-y-2 text-[var(--content-muted)]">
               {hasRental && (
-                <div className="text-white/50 text-xs mb-2">
+                <div className="text-[var(--content-subtle)] text-xs mb-2">
                   Owner portion: {(ownerPortion * 100).toFixed(0)}% | Rental portion: {(rentalPortion * 100).toFixed(0)}%
                 </div>
               )}
               
               {/* Owner-Occupied Deductions */}
-              <div className="text-white/60 text-xs mt-2">Owner-Occupied (Schedule A):</div>
+              <div className="text-[var(--content-subtle)] text-xs mt-2">Owner-Occupied (Schedule A):</div>
               <div className="flex justify-between pl-4">
                 <span>Standard Deduction ({inputs.filingStatus})</span>
                 <span className="font-mono">{formatCurrency(standardDeduction)}</span>
@@ -759,7 +759,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
               </div>
               <div className="flex justify-between pl-4">
                 <span>Benefit Over Standard</span>
-                <span className={`font-mono ${totalItemized > standardDeduction ? 'text-green-400' : 'text-white/40'}`}>
+                <span className={`font-mono ${totalItemized > standardDeduction ? 'text-green-400' : 'text-[var(--content-subtle)]'}`}>
                   {totalItemized > standardDeduction ? `+${formatCurrency(totalItemized - standardDeduction)}` : 'None'}
                 </span>
               </div>
@@ -773,7 +773,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
               {/* Rental Deductions */}
               {hasRental && (
                 <>
-                  <div className="text-white/60 text-xs mt-4">Rental (Schedule E):</div>
+                  <div className="text-[var(--content-subtle)] text-xs mt-4">Rental (Schedule E):</div>
                   <div className="flex justify-between pl-4">
                     <span>Rental Income</span>
                     <span className="font-mono">{formatCurrency(annualRentalIncome)}</span>
@@ -801,7 +801,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                         <span className="font-mono">{formatCurrency(passiveLossAllowance)}</span>
                       </div>
                       {inputs.w2Income > 100000 && inputs.w2Income < 150000 && (
-                        <div className="text-white/40 text-xs pl-4">
+                        <div className="text-[var(--content-subtle)] text-xs pl-4">
                           (Phased out: AGI ${inputs.w2Income.toLocaleString()} → lose ${((inputs.w2Income - 100000) / 2).toLocaleString()})
                         </div>
                       )}
@@ -814,12 +814,12 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 </>
               )}
               
-              <div className="flex justify-between border-t border-white/10 pt-2 text-yellow-400">
+              <div className="flex justify-between border-t border-[var(--border)] pt-2 text-yellow-400">
                 <span className="font-bold">TOTAL TAX SAVINGS</span>
                 <span className="font-mono font-bold">{formatCurrency(totalTaxBenefit)}/yr</span>
               </div>
             </div>
-            <p className="mt-3 text-xs text-white/50">
+            <p className="mt-3 text-xs text-[var(--content-subtle)]">
               💡 Passive losses above income can offset up to $25k of W2 income if AGI &lt; $100k (phases out $100-150k).
             </p>
           </div>
@@ -827,7 +827,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
           {/* Step 5: Rent Comparison */}
           <div className="p-4 bg-emerald-900/20 border border-emerald-500/30 rounded-xl">
             <h4 className="text-emerald-400 font-bold mb-3">Step 5: Rent + Invest Alternative</h4>
-            <div className="space-y-2 text-white/80">
+            <div className="space-y-2 text-[var(--content-muted)]">
               <div className="flex justify-between">
                 <span>Current Rent</span>
                 <span className="font-mono">{formatCurrency(inputs.currentRent)}/mo</span>
@@ -840,18 +840,18 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 <span>Rent Growth Rate</span>
                 <span className="font-mono">{(inputs.rentGrowth * 100).toFixed(1)}%/yr</span>
               </div>
-              <div className="flex justify-between border-t border-white/10 pt-2">
+              <div className="flex justify-between border-t border-[var(--border)] pt-2">
                 <span>Buy costs {netCostBuy > annualRent ? 'more' : 'less'} by</span>
                 <span className={`font-mono ${netCostBuy > annualRent ? 'text-red-400' : 'text-green-400'}`}>
                   {formatCurrency(Math.abs(netCostBuy - annualRent))}/yr
                 </span>
               </div>
-              <div className="flex justify-between text-white/60">
+              <div className="flex justify-between text-[var(--content-subtle)]">
                 <span>Monthly difference</span>
                 <span className="font-mono">{formatCurrency(Math.abs(monthlySavings))}/mo</span>
               </div>
             </div>
-            <p className="mt-3 text-xs text-white/50">
+            <p className="mt-3 text-xs text-[var(--content-subtle)]">
               💡 If renting is cheaper, you invest the {formatCurrency(totalUpfront)} down payment PLUS {formatCurrency(Math.abs(monthlySavings))}/mo savings into stocks.
               {netCostBuy < annualRent && ` If buying is cheaper, YOU invest the ${formatCurrency(Math.abs(monthlySavings))}/mo savings.`}
             </p>
@@ -860,36 +860,36 @@ Primary Residence Exemption,$250k/$500k,Section 121
           {/* Step 6: Distributions */}
           <div className="p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-xl">
             <h4 className="text-cyan-400 font-bold mb-3">Step 6: Return Distributions</h4>
-            <div className="space-y-3 text-white/80">
+            <div className="space-y-3 text-[var(--content-muted)]">
               <p>
                 We run <span className="text-cyan-400 font-bold">{inputs.numSimulations.toLocaleString()}</span> simulations. 
                 In each one, we randomly sample:
               </p>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-black/30 rounded-lg">
-                  <div className="text-white/60 text-xs mb-1">Home Appreciation</div>
+                <div className="p-3 bg-[var(--surface)] rounded-lg">
+                  <div className="text-[var(--content-subtle)] text-xs mb-1">Home Appreciation</div>
                   <div className="font-mono">
                     μ = {(inputs.appreciationMean * 100).toFixed(1)}%/yr
                     <br />
                     σ = {(inputs.appreciationStdDev * 100).toFixed(1)}%
                   </div>
-                  <div className="text-xs text-white/40 mt-1">
+                  <div className="text-xs text-[var(--content-subtle)] mt-1">
                     Range: roughly {((inputs.appreciationMean - 2*inputs.appreciationStdDev) * 100).toFixed(0)}% to +{((inputs.appreciationMean + 2*inputs.appreciationStdDev) * 100).toFixed(0)}%
                   </div>
                 </div>
-                <div className="p-3 bg-black/30 rounded-lg">
-                  <div className="text-white/60 text-xs mb-1">Stock Returns</div>
+                <div className="p-3 bg-[var(--surface)] rounded-lg">
+                  <div className="text-[var(--content-subtle)] text-xs mb-1">Stock Returns</div>
                   <div className="font-mono">
                     μ = {(inputs.stockReturnMean * 100).toFixed(1)}%/yr
                     <br />
                     σ = {(inputs.stockReturnStdDev * 100).toFixed(1)}%
                   </div>
-                  <div className="text-xs text-white/40 mt-1">
+                  <div className="text-xs text-[var(--content-subtle)] mt-1">
                     Range: roughly {((inputs.stockReturnMean - 2*inputs.stockReturnStdDev) * 100).toFixed(0)}% to +{((inputs.stockReturnMean + 2*inputs.stockReturnStdDev) * 100).toFixed(0)}%
                   </div>
                 </div>
               </div>
-              <p className="text-white/60 text-xs">
+              <p className="text-[var(--content-subtle)] text-xs">
                 Each year, we draw random returns from normal distributions and compound them. 
                 After {inputs.years} years, we compare: <span className="text-blue-400">Home Equity</span> vs <span className="text-green-400">Stock Portfolio</span>.
               </p>
@@ -897,10 +897,10 @@ Primary Residence Exemption,$250k/$500k,Section 121
           </div>
           
           {/* Step 7: Final Comparison */}
-          <div className="p-4 bg-gradient-to-br from-green-900/30 to-blue-900/30 border border-white/20 rounded-xl">
-            <h4 className="text-white font-bold mb-3">Step 7: Final Wealth Comparison (Year {inputs.years})</h4>
-            <div className="text-xs text-white/50 mb-3">
-              Exit strategy: <span className="text-white/80 font-medium">
+          <div className="p-4 bg-gradient-to-br from-green-900/30 to-blue-900/30 border border-[var(--border)] rounded-xl">
+            <h4 className="text-[var(--content)] font-bold mb-3">Step 7: Final Wealth Comparison (Year {inputs.years})</h4>
+            <div className="text-xs text-[var(--content-subtle)] mb-3">
+              Exit strategy: <span className="text-[var(--content-muted)] font-medium">
                 {inputs.exitStrategy === 'hold' && 'Hold Forever (paper equity, no taxes)'}
                 {inputs.exitStrategy === '1031' && '1031 Exchange (defer all taxes)'}
                 {inputs.exitStrategy === 'remote' && 'Remote Landlord (100% rental, PM fees)'}
@@ -912,10 +912,10 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 <div className="text-blue-400 font-bold mb-2">If You Buy</div>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-white/60">Wealth (P50)</span>
+                    <span className="text-[var(--content-subtle)]">Wealth (P50)</span>
                     <span className="font-mono">{formatCurrency(finalYear?.wealthBuy.p50 || 0)}</span>
                   </div>
-                  <div className="text-xs text-white/40 pl-2">
+                  <div className="text-xs text-[var(--content-subtle)] pl-2">
                     {inputs.exitStrategy === 'hold' && '(paper equity, no selling costs or taxes)'}
                     {inputs.exitStrategy === '1031' && '(after selling costs, taxes deferred)'}
                     {inputs.exitStrategy === 'remote' && '(after selling costs + full taxes)'}
@@ -927,30 +927,30 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 <div className="text-green-400 font-bold mb-2">If You Rent + Invest</div>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-white/60">Portfolio Value (P50)</span>
+                    <span className="text-[var(--content-subtle)]">Portfolio Value (P50)</span>
                     <span className="font-mono">{formatCurrency(finalYear?.wealthRent.p50 || 0)}</span>
                   </div>
-                  <div className="text-xs text-white/40 pl-2">
+                  <div className="text-xs text-[var(--content-subtle)] pl-2">
                     (down payment + monthly savings, compounded)
                   </div>
                 </div>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-white/20 text-center">
-              <div className="text-white/60 mb-1">Median Outcome (P50)</div>
+            <div className="mt-4 pt-4 border-t border-[var(--border)] text-center">
+              <div className="text-[var(--content-subtle)] mb-1">Median Outcome (P50)</div>
               <div className={`text-2xl font-bold ${(finalYear?.delta.p50 || 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {(finalYear?.delta.p50 || 0) > 0 ? 'Buying wins by ' : 'Renting wins by '}
                 {formatCurrency(Math.abs(finalYear?.delta.p50 || 0))}
               </div>
-              <div className="text-white/50 text-sm mt-1">
+              <div className="text-[var(--content-subtle)] text-sm mt-1">
                 Buy wins in {(simResults.finalStats.buyWinsProbability * 100).toFixed(0)}% of {inputs.numSimulations.toLocaleString()} simulations
               </div>
             </div>
           </div>
           
           {/* Disclaimer */}
-          <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl text-xs text-white/40">
-            <strong className="text-white/60">Important Caveats:</strong>
+          <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-xs text-[var(--content-subtle)]">
+            <strong className="text-[var(--content-subtle)]">Important Caveats:</strong>
             <ul className="mt-2 space-y-1 list-disc list-inside">
               <li>This assumes you stay the full {inputs.years} years. Selling early typically favors renting.</li>
               <li>Real returns have "fat tails" — extreme outcomes (crashes, booms) happen more than normal distributions suggest.</li>
@@ -1064,7 +1064,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
       {/* Histogram Chart */}
       <div className="relative">
         {/* Y-axis label */}
-        <div className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-90 text-white/40 text-xs whitespace-nowrap">
+        <div className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-90 text-[var(--content-subtle)] text-xs whitespace-nowrap">
           Simulations
         </div>
         
@@ -1090,7 +1090,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
                 key={idx}
                 className={`flex-1 relative cursor-pointer transition-all duration-300 ease-out
                            ${isHovered || isSelected ? 'opacity-100 scale-y-105' : 'opacity-80 hover:opacity-95'}
-                           ${isSelected ? 'ring-2 ring-white/50' : ''}`}
+                           ${isSelected ? 'ring-2 ring-[var(--border)]' : ''}`}
                 style={{ 
                   height: animationComplete ? `${heightPercent}%` : '0%',
                   transitionDelay: `${idx * 15}ms`,
@@ -1103,13 +1103,13 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
                 
                 {/* Percentile markers on specific bins */}
                 {idx > 0 && histogramData.bins[idx - 1].cumulativePercentile < 10 && bin.cumulativePercentile >= 10 && (
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-white/60 whitespace-nowrap">P10</div>
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-[var(--content-subtle)] whitespace-nowrap">P10</div>
                 )}
                 {idx > 0 && histogramData.bins[idx - 1].cumulativePercentile < 50 && bin.cumulativePercentile >= 50 && (
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-yellow-400 font-bold whitespace-nowrap">P50</div>
                 )}
                 {idx > 0 && histogramData.bins[idx - 1].cumulativePercentile < 90 && bin.cumulativePercentile >= 90 && (
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-white/60 whitespace-nowrap">P90</div>
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-[var(--content-subtle)] whitespace-nowrap">P90</div>
                 )}
               </div>
             )
@@ -1117,40 +1117,40 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
         </div>
         
         {/* X-axis */}
-        <div className="ml-8 flex justify-between mt-2 text-xs text-white/40">
+        <div className="ml-8 flex justify-between mt-2 text-xs text-[var(--content-subtle)]">
           <span>{formatCurrency(histogramData.min)}</span>
-          <span className="text-white/60">← Rent wins | Buy wins →</span>
+          <span className="text-[var(--content-subtle)]">← Rent wins | Buy wins →</span>
           <span>{formatCurrency(histogramData.max)}</span>
         </div>
         
         {/* Zero line indicator */}
         {histogramData.min < 0 && histogramData.max > 0 && (
           <div 
-            className="absolute bottom-8 w-0.5 h-48 md:h-64 bg-white/30"
+            className="absolute bottom-8 w-0.5 h-48 md:h-64 bg-[var(--surface-muted)]"
             style={{ 
               left: `calc(2rem + ${((0 - histogramData.min) / (histogramData.max - histogramData.min)) * 100}% - 1px)` 
             }}
           >
-            <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-white/70 whitespace-nowrap">$0</span>
+            <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-[var(--content-muted)] whitespace-nowrap">$0</span>
           </div>
         )}
       </div>
       
       {/* Hover tooltip */}
       {hoveredBin && !selectedBin && (
-        <div className="p-3 bg-white/[0.03] border border-white/[0.1] rounded-lg animate-in fade-in duration-150">
+        <div className="p-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg animate-in fade-in duration-150">
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <div>
-              <span className="text-white/50">Range:</span>
-              <span className="text-white ml-1 font-mono">{formatCurrency(hoveredBin.rangeMin)} to {formatCurrency(hoveredBin.rangeMax)}</span>
+              <span className="text-[var(--content-subtle)]">Range:</span>
+              <span className="text-[var(--content)] ml-1 font-mono">{formatCurrency(hoveredBin.rangeMin)} to {formatCurrency(hoveredBin.rangeMax)}</span>
             </div>
             <div>
-              <span className="text-white/50">Count:</span>
-              <span className="text-white ml-1 font-mono">{hoveredBin.count.toLocaleString()} ({hoveredBin.percentage.toFixed(1)}%)</span>
+              <span className="text-[var(--content-subtle)]">Count:</span>
+              <span className="text-[var(--content)] ml-1 font-mono">{hoveredBin.count.toLocaleString()} ({hoveredBin.percentage.toFixed(1)}%)</span>
             </div>
             <div>
-              <span className="text-white/50">Percentile:</span>
-              <span className="text-white ml-1 font-mono">P{Math.round(hoveredBin.cumulativePercentile - hoveredBin.percentage / 2)} – P{Math.round(hoveredBin.cumulativePercentile)}</span>
+              <span className="text-[var(--content-subtle)]">Percentile:</span>
+              <span className="text-[var(--content)] ml-1 font-mono">P{Math.round(hoveredBin.cumulativePercentile - hoveredBin.percentage / 2)} – P{Math.round(hoveredBin.cumulativePercentile)}</span>
             </div>
           </div>
         </div>
@@ -1158,37 +1158,37 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
       
       {/* Selected bin detail panel */}
       {selectedBin && (
-        <div className="p-4 bg-white/[0.03] border border-white/[0.15] rounded-xl animate-in slide-in-from-bottom-2 duration-200">
+        <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl animate-in slide-in-from-bottom-2 duration-200">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-white font-medium">
+            <h4 className="text-[var(--content)] font-medium">
               Bin Details: {formatCurrency(selectedBin.rangeMin)} to {formatCurrency(selectedBin.rangeMax)}
             </h4>
             <button 
               onClick={() => setSelectedBin(null)}
-              className="text-white/40 hover:text-white/70 transition-colors"
+              className="text-[var(--content-subtle)] hover:text-[var(--content-muted)] transition-colors"
             >
               ✕
             </button>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="bg-white/[0.02] rounded-lg p-2">
-              <div className="text-white/50 text-xs">Simulations</div>
-              <div className="text-white font-mono text-lg">{selectedBin.count.toLocaleString()}</div>
-              <div className="text-white/40 text-xs">{selectedBin.percentage.toFixed(2)}% of total</div>
+            <div className="bg-[var(--surface)] rounded-lg p-2">
+              <div className="text-[var(--content-subtle)] text-xs">Simulations</div>
+              <div className="text-[var(--content)] font-mono text-lg">{selectedBin.count.toLocaleString()}</div>
+              <div className="text-[var(--content-subtle)] text-xs">{selectedBin.percentage.toFixed(2)}% of total</div>
             </div>
-            <div className="bg-white/[0.02] rounded-lg p-2">
-              <div className="text-white/50 text-xs">Percentile Range</div>
-              <div className="text-white font-mono text-lg">P{Math.round(selectedBin.cumulativePercentile - selectedBin.percentage)} – P{Math.round(selectedBin.cumulativePercentile)}</div>
+            <div className="bg-[var(--surface)] rounded-lg p-2">
+              <div className="text-[var(--content-subtle)] text-xs">Percentile Range</div>
+              <div className="text-[var(--content)] font-mono text-lg">P{Math.round(selectedBin.cumulativePercentile - selectedBin.percentage)} – P{Math.round(selectedBin.cumulativePercentile)}</div>
             </div>
-            <div className="bg-white/[0.02] rounded-lg p-2">
-              <div className="text-white/50 text-xs">Avg Delta</div>
+            <div className="bg-[var(--surface)] rounded-lg p-2">
+              <div className="text-[var(--content-subtle)] text-xs">Avg Delta</div>
               <div className={`font-mono text-lg ${(selectedBin.rangeMin + selectedBin.rangeMax) / 2 > 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {formatCurrency((selectedBin.rangeMin + selectedBin.rangeMax) / 2)}
               </div>
             </div>
-            <div className="bg-white/[0.02] rounded-lg p-2">
-              <div className="text-white/50 text-xs">Outcome</div>
+            <div className="bg-[var(--surface)] rounded-lg p-2">
+              <div className="text-[var(--content-subtle)] text-xs">Outcome</div>
               <div className={`font-medium ${selectedBin.rangeMax < 0 ? 'text-red-400' : selectedBin.rangeMin > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
                 {selectedBin.rangeMax < 0 ? 'Rent wins' : selectedBin.rangeMin > 0 ? 'Buy wins' : 'Mixed'}
               </div>
@@ -1196,11 +1196,11 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
           </div>
           
           {/* Sample runs from this bin */}
-          <div className="text-white/50 text-xs mb-2">Sample Simulations (up to 10)</div>
+          <div className="text-[var(--content-subtle)] text-xs mb-2">Sample Simulations (up to 10)</div>
           <div className="space-y-1 max-h-32 overflow-y-auto">
             {selectedBin.runs.map((run, i) => (
-              <div key={i} className="flex items-center gap-4 text-xs bg-white/[0.01] rounded px-2 py-1">
-                <span className="text-white/40 w-8">#{run.id}</span>
+              <div key={i} className="flex items-center gap-4 text-xs bg-[var(--surface)] rounded px-2 py-1">
+                <span className="text-[var(--content-subtle)] w-8">#{run.id}</span>
                 <span className="text-green-400/80">Buy: {formatCurrency(run.wealthBuy)}</span>
                 <span className="text-red-400/80">Rent: {formatCurrency(run.wealthRent)}</span>
                 <span className={`ml-auto font-mono ${run.delta > 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -1213,7 +1213,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
       )}
       
       {/* Legend / Key Stats */}
-      <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-white/50">
+      <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-[var(--content-subtle)]">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 bg-red-500 rounded-sm" />
           <span>Rent wins ({((1 - finalStats.buyWinsProbability) * 100).toFixed(0)}%)</span>
@@ -1222,7 +1222,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
           <div className="w-3 h-3 bg-green-500 rounded-sm" />
           <span>Buy wins ({(finalStats.buyWinsProbability * 100).toFixed(0)}%)</span>
         </div>
-        <div className="text-white/30">|</div>
+        <div className="text-[var(--content-subtle)]">|</div>
         <span>Hover for percentile • Click for details</span>
       </div>
     </div>
@@ -1608,16 +1608,16 @@ function HousePageInner() {
     delay?: number
   }) => (
     <div 
-      className="bg-white/[0.04]/60 rounded-lg p-3 md:p-4 border border-white/[0.08]/50 min-w-0 
-                 transition-all duration-300 hover:bg-white/[0.06] hover:border-white/[0.12]
+      className="bg-[var(--surface)] rounded-lg p-3 md:p-4 border border-[var(--border)] min-w-0 
+                 transition-all duration-300 hover:bg-[var(--surface-muted)] hover:border-[var(--border)]
                  animate-in fade-in slide-in-from-bottom-2"
       style={{ animationDelay: `${delay}ms`, animationFillMode: 'backwards' }}
     >
-      <div className="text-white/60 text-[10px] sm:text-xs md:text-sm mb-1 truncate leading-tight">{label}</div>
-      <div className={`text-base sm:text-lg md:text-2xl font-bold font-mono truncate transition-colors ${color === 'green' ? 'text-green-400' : color === 'red' ? 'text-red-400' : color === 'blue' ? 'text-blue-400' : 'text-white'}`}>
+      <div className="text-[var(--content-subtle)] text-[10px] sm:text-xs md:text-sm mb-1 truncate leading-tight">{label}</div>
+      <div className={`text-base sm:text-lg md:text-2xl font-bold font-mono truncate transition-colors ${color === 'green' ? 'text-green-400' : color === 'red' ? 'text-red-400' : color === 'blue' ? 'text-blue-400' : 'text-[var(--content)]'}`}>
         {value}
       </div>
-      {sub && <div className="text-white/40 text-[10px] sm:text-xs mt-1">{sub}</div>}
+      {sub && <div className="text-[var(--content-subtle)] text-[10px] sm:text-xs mt-1">{sub}</div>}
     </div>
   )
 
@@ -1640,7 +1640,7 @@ function HousePageInner() {
       <div 
         key={`hero-${inputs.homePrice}-${inputs.hoaMonthly}-${inputs.units.length}`}
         data-section="hero"
-        className="bg-gradient-to-br from-white/[0.03] to-transparent border border-white/[0.08] rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6"
+        className="bg-gradient-to-br from-[var(--surface-muted)] to-transparent border border-[var(--border)] rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6"
       >
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Price */}
@@ -1795,7 +1795,7 @@ function HousePageInner() {
         
         {/* Rental Strategy Quick Toggle */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
-          <span className="text-white/50 text-xs sm:text-sm">Rental:</span>
+          <span className="text-[var(--content-subtle)] text-xs sm:text-sm">Rental:</span>
           <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {[
               { label: 'None', active: inputs.units.length === 0 && !inputs.houseHack },
@@ -1820,8 +1820,8 @@ function HousePageInner() {
                 }}
                 className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   opt.active
-                    ? 'bg-[#84BABF] text-white shadow-lg shadow-[#84BABF]/20'
-                    : 'bg-white/[0.04] text-white/50 hover:bg-white/[0.08] hover:text-white/70'
+                    ? 'bg-[#84BABF] text-[var(--content)] shadow-lg shadow-[#84BABF]/20'
+                    : 'bg-[var(--surface)] text-[var(--content-subtle)] hover:bg-[var(--surface-muted)] hover:text-[var(--content-muted)]'
                 }`}
               >
                 {opt.label}
@@ -1833,15 +1833,15 @@ function HousePageInner() {
           {rentalSummary && (
             <div className="ml-auto flex items-center gap-2 text-sm">
               <span className="text-green-400 font-mono">${rentalSummary.totalRent.toLocaleString()}/mo</span>
-              <span className="text-white/30">income</span>
+              <span className="text-[var(--content-subtle)]">income</span>
             </div>
           )}
         </div>
         
         {/* Room Rental Input */}
         {inputs.units.length === 0 && inputs.houseHack && (
-          <div className="flex items-center gap-4 p-3 bg-white/[0.02] rounded-lg mb-4">
-            <span className="text-white/50 text-sm">Rental income:</span>
+          <div className="flex items-center gap-4 p-3 bg-[var(--surface)] rounded-lg mb-4">
+            <span className="text-[var(--content-subtle)] text-sm">Rental income:</span>
             <div className="relative w-32">
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--content-subtle)] text-sm">$</span>
               <input
@@ -1859,7 +1859,7 @@ function HousePageInner() {
                 className="themed-input w-full pl-6 pr-2 py-1.5 border rounded-lg font-mono text-sm"
               />
             </div>
-            <span className="text-white/30 text-sm">/mo</span>
+            <span className="text-[var(--content-subtle)] text-sm">/mo</span>
           </div>
         )}
         
@@ -1872,7 +1872,7 @@ function HousePageInner() {
                 className={`p-3 rounded-xl border transition-all cursor-pointer ${
                   unit.ownerOccupied 
                     ? 'bg-green-900/30 border-green-500/50' 
-                    : 'bg-white/[0.02] border-white/[0.08] hover:border-white/20'
+                    : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border)]'
                 }`}
                 onClick={() => {
                   const newUnits = inputs.units.map((u, i) => ({ ...u, ownerOccupied: i === idx }))
@@ -1880,7 +1880,7 @@ function HousePageInner() {
                 }}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-white/70 text-sm">{unit.beds}BR/{unit.baths}BA</span>
+                  <span className="text-[var(--content-muted)] text-sm">{unit.beds}BR/{unit.baths}BA</span>
                   {unit.ownerOccupied && <span className="rounded-full border border-green-500/40 bg-green-500/10 px-2 py-0.5 text-green-400 text-xs">You</span>}
                 </div>
                 {!unit.ownerOccupied && (
@@ -1915,14 +1915,14 @@ function HousePageInner() {
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
             data-shortcut="advanced"
-            className="flex items-center gap-2 text-white/50 hover:text-white/70 text-sm transition-colors"
+            className="flex items-center gap-2 text-[var(--content-subtle)] hover:text-[var(--content-muted)] text-sm transition-colors"
           >
             <span className={`icon-disclosure transition-transform ${showAdvanced ? 'rotate-90' : ''}`} aria-hidden="true" />
-            Advanced Settings <kbd className="ml-2 px-1.5 py-0.5 bg-white/[0.06] rounded text-[10px] text-white/40 hidden md:inline">A</kbd>
+            Advanced Settings <kbd className="ml-2 px-1.5 py-0.5 bg-[var(--surface-muted)] rounded text-[10px] text-[var(--content-subtle)] hidden md:inline">A</kbd>
           </button>
           
           {showAdvanced && (
-            <div className="mt-4 p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+            <div className="mt-4 p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 <InputField label="HOA/mo" value={inputs.hoaMonthly} onChange={(v: number) => update('hoaMonthly', v)} prefix="$" tooltip="Monthly HOA dues. Multi-family usually $0." min={0} max={5000} />
                 <InputField label="Maintenance/yr" value={inputs.maintenanceAnnual} onChange={(v: number) => update('maintenanceAnnual', v)} prefix="$" tooltip="Annual repairs/upkeep. ~1% of home value." min={0} max={100000} />
@@ -1945,10 +1945,10 @@ function HousePageInner() {
           <button
             onClick={() => setShowStrategies(!showStrategies)}
             data-shortcut="strategies"
-            className="flex items-center gap-2 text-white/50 hover:text-white/70 text-sm transition-colors"
+            className="flex items-center gap-2 text-[var(--content-subtle)] hover:text-[var(--content-muted)] text-sm transition-colors"
           >
             <span className={`icon-disclosure transition-transform ${showStrategies ? 'rotate-90' : ''}`} aria-hidden="true" />
-            Strategies / Scenarios <kbd className="ml-2 px-1.5 py-0.5 bg-white/[0.06] rounded text-[10px] text-white/40 hidden md:inline">T</kbd>
+            Strategies / Scenarios <kbd className="ml-2 px-1.5 py-0.5 bg-[var(--surface-muted)] rounded text-[10px] text-[var(--content-subtle)] hidden md:inline">T</kbd>
           </button>
         
         {showStrategies && (
@@ -1968,7 +1968,7 @@ function HousePageInner() {
                     rateDiscount: 0.0025,
                     taxCredit: 0,
                   })}
-                  className="w-4 h-4 rounded border-violet-500/50 bg-black text-violet-500" 
+                  className="w-4 h-4 rounded border-violet-500/50 bg-[var(--surface)] text-violet-500" 
                 />
                 <span className="text-violet-300 font-medium">First-Time Homebuyer (ONE Mortgage, MassHousing)</span>
               </label>
@@ -1978,13 +1978,13 @@ function HousePageInner() {
                     <input type="checkbox" checked={inputs.firstTimeHomeBuyer?.noPMI || false}
                       onChange={(e) => update('firstTimeHomeBuyer', { ...inputs.firstTimeHomeBuyer, noPMI: e.target.checked })}
                       className="w-3 h-3 rounded" />
-                    <span className="text-white/70">No PMI</span>
+                    <span className="text-[var(--content-muted)]">No PMI</span>
                   </label>
                   <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={inputs.firstTimeHomeBuyer?.lowerRate || false}
                       onChange={(e) => update('firstTimeHomeBuyer', { ...inputs.firstTimeHomeBuyer, lowerRate: e.target.checked })}
                       className="w-3 h-3 rounded" />
-                    <span className="text-white/70">-0.25% Rate</span>
+                    <span className="text-[var(--content-muted)]">-0.25% Rate</span>
                   </label>
                 </div>
               )}
@@ -1997,15 +1997,15 @@ function HousePageInner() {
                   type="checkbox" 
                   checked={inputs.heloc.enabled}
                   onChange={(e) => update('heloc', { ...inputs.heloc, enabled: e.target.checked })}
-                  className="w-4 h-4 rounded border-emerald-500/50 bg-black text-emerald-500" 
+                  className="w-4 h-4 rounded border-emerald-500/50 bg-[var(--surface)] text-emerald-500" 
                 />
                 <span className="text-emerald-300 font-medium">HELOC → Equities (extract equity, deploy to stocks)</span>
               </label>
             </div>
             
             {/* Advanced Tax Strategies */}
-            <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
-              <div className="text-white/50 text-sm mb-3">Advanced Tax Strategies</div>
+            <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
+              <div className="text-[var(--content-subtle)] text-sm mb-3">Advanced Tax Strategies</div>
               <div className="flex flex-wrap gap-4">
                 <label className="flex items-center gap-2 text-sm cursor-pointer" title="Accelerate depreciation by reclassifying 20% of building as 5/7/15-year assets. 100% bonus depreciation in Year 1.">
                   <input type="checkbox" checked={inputs.taxStrategies?.costSegregation?.enabled || false}
@@ -2017,7 +2017,7 @@ function HousePageInner() {
                         year1BonusDepreciation: 1.0 
                       }
                     })}
-                    className="w-4 h-4 rounded border-purple-500/50 bg-black text-purple-500" />
+                    className="w-4 h-4 rounded border-purple-500/50 bg-[var(--surface)] text-purple-500" />
                   <span className="text-purple-300 font-medium">Cost Segregation Study</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer" title="20% QBI deduction on net rental income. Requires 250+ hours/year managing property.">
@@ -2026,7 +2026,7 @@ function HousePageInner() {
                       ...inputs.taxStrategies,
                       qbi: { enabled: e.target.checked, qualifiesAsBusiness: e.target.checked }
                     })}
-                    className="w-4 h-4 rounded border-amber-500/50 bg-black text-amber-500" />
+                    className="w-4 h-4 rounded border-amber-500/50 bg-[var(--surface)] text-amber-500" />
                   <span className="text-amber-300 font-medium">QBI Deduction (199A)</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer" title="Defer capital gains and depreciation recapture by reinvesting into like-kind property.">
@@ -2035,15 +2035,15 @@ function HousePageInner() {
                       ...inputs.taxStrategies,
                       exchange1031: { enabled: e.target.checked }
                     })}
-                    className="w-4 h-4 rounded border-cyan-500/50 bg-black text-cyan-500" />
+                    className="w-4 h-4 rounded border-cyan-500/50 bg-[var(--surface)] text-cyan-500" />
                   <span className="text-cyan-300 font-medium">1031 Exchange</span>
                 </label>
               </div>
             </div>
             
             {/* Exit Strategy */}
-            <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
-              <div className="text-white/50 text-sm mb-3">Exit Strategy</div>
+            <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
+              <div className="text-[var(--content-subtle)] text-sm mb-3">Exit Strategy</div>
               <div className="flex flex-wrap gap-2">
                 {[
                   { value: 'sell', label: 'Sell', color: 'red', desc: 'Pay all taxes' },
@@ -2057,7 +2057,7 @@ function HousePageInner() {
                     className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
                       inputs.exitStrategy === value
                         ? `bg-${color}-500/30 border-${color}-500 text-${color}-300`
-                        : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'
+                        : 'bg-[var(--surface)] border-[var(--border)] text-[var(--content-subtle)] hover:bg-[var(--surface-muted)]'
                     } border`}
                     title={desc}
                   >
@@ -2065,7 +2065,7 @@ function HousePageInner() {
                   </button>
                 ))}
               </div>
-              <div className="text-white/40 text-xs mt-2">
+              <div className="text-[var(--content-subtle)] text-xs mt-2">
                 {inputs.exitStrategy === 'sell' && '→ Sell at year N, pay 6% costs + capital gains + depreciation recapture'}
                 {inputs.exitStrategy === 'hold' && '→ Never sell, paper equity only (buy-borrow-die strategy)'}
                 {inputs.exitStrategy === '1031' && '→ Exchange into bigger property, defer all taxes indefinitely'}
@@ -2074,8 +2074,8 @@ function HousePageInner() {
             </div>
             
             {/* Scenarios */}
-            <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
-              <div className="text-white/50 text-sm mb-3">Risk Scenarios</div>
+            <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
+              <div className="text-[var(--content-subtle)] text-sm mb-3">Risk Scenarios</div>
               <div className="flex flex-wrap gap-3">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="checkbox" checked={!!inputs.scenarios.jobLoss}
@@ -2116,7 +2116,7 @@ function HousePageInner() {
           disabled={isRunning}
           className="w-full py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 
                      disabled:from-gray-700 disabled:to-gray-600 disabled:cursor-not-allowed
-                     rounded-xl text-white font-bold text-base sm:text-lg shadow-lg shadow-blue-900/30
+                     rounded-xl text-[var(--content)] font-bold text-base sm:text-lg shadow-lg shadow-blue-900/30
                      transition-all duration-200 hover:shadow-blue-900/50 hover:scale-[1.01] active:scale-[0.99]
                      flex items-center justify-center gap-2 sm:gap-3 group"
         >
@@ -2131,7 +2131,7 @@ function HousePageInner() {
           ) : (
             <>
               <span className="group-hover:translate-x-0.5 transition-transform">Run Simulation</span> 
-              <kbd className="ml-2 px-2 py-0.5 bg-white/10 rounded text-sm hidden md:inline group-hover:bg-white/20 transition-colors">R</kbd>
+              <kbd className="ml-2 px-2 py-0.5 bg-[var(--surface-muted)] rounded text-sm hidden md:inline group-hover:bg-[var(--surface-muted)] transition-colors">R</kbd>
             </>
           )}
         </button>
@@ -2285,16 +2285,16 @@ function HousePageInner() {
             <Section title="HELOC Activity (Sample Runs)">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="text-sm font-medium text-white/60 mb-2">Runs with HELOC Draws</h4>
+                  <h4 className="text-sm font-medium text-[var(--content-subtle)] mb-2">Runs with HELOC Draws</h4>
                   <p className="text-2xl font-bold text-green-400">
                     {simResults.runs.filter(r => r.years.some(y => y.helocBalance > 0)).length.toLocaleString()} / {inputs.numSimulations.toLocaleString()}
                   </p>
-                  <p className="text-xs text-white/40">
+                  <p className="text-xs text-[var(--content-subtle)]">
                     ({((simResults.runs.filter(r => r.years.some(y => y.helocBalance > 0)).length / inputs.numSimulations) * 100).toFixed(0)}% of simulations used HELOC)
                   </p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-white/60 mb-2">Avg Final HELOC Stocks (when used)</h4>
+                  <h4 className="text-sm font-medium text-[var(--content-subtle)] mb-2">Avg Final HELOC Stocks (when used)</h4>
                   {(() => {
                     const runsWithHeloc = simResults.runs.filter(r => r.years[r.years.length - 1]?.stocksFromHeloc > 0)
                     const avgStocks = runsWithHeloc.length > 0 
@@ -2303,7 +2303,7 @@ function HousePageInner() {
                     return (
                       <>
                         <p className="text-2xl font-bold text-blue-400">{formatCurrency(avgStocks)}</p>
-                        <p className="text-xs text-white/40">Stocks purchased with HELOC proceeds</p>
+                        <p className="text-xs text-[var(--content-subtle)]">Stocks purchased with HELOC proceeds</p>
                       </>
                     )
                   })()}
@@ -2317,20 +2317,20 @@ function HousePageInner() {
             {/* Mobile view: simplified card layout */}
             <div className="md:hidden space-y-2">
               {simResults.yearlyStats.map((y) => (
-                <div key={y.year} className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.06]">
+                <div key={y.year} className="bg-[var(--surface)] rounded-lg p-3 border border-[var(--border)]">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-white/60 text-sm font-medium">Year {y.year}</span>
+                    <span className="text-[var(--content-subtle)] text-sm font-medium">Year {y.year}</span>
                     <span className={`text-sm font-bold ${y.delta.p50 > 0 ? 'text-green-400' : 'text-red-400'}`}>
                       Δ {formatCurrency(y.delta.p50)}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <span className="text-white/40">Buy:</span>
+                      <span className="text-[var(--content-subtle)]">Buy:</span>
                       <span className="text-green-400 ml-1">{formatCurrency(y.wealthBuy.p50)}</span>
                     </div>
                     <div>
-                      <span className="text-white/40">Rent:</span>
+                      <span className="text-[var(--content-subtle)]">Rent:</span>
                       <span className="text-red-400 ml-1">{formatCurrency(y.wealthRent.p50)}</span>
                     </div>
                   </div>
@@ -2341,7 +2341,7 @@ function HousePageInner() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-white/60 border-b border-white/[0.08]">
+                  <tr className="text-[var(--content-subtle)] border-b border-[var(--border)]">
                     <th className="text-left py-2">Year</th>
                     <th className="text-right">Buy P10</th>
                     <th className="text-right">Buy P50</th>
@@ -2380,23 +2380,23 @@ function HousePageInner() {
               <div className="bg-green-900/10 rounded-lg p-3 sm:p-4 border border-green-500/20">
                 <h4 className="text-sm font-medium text-green-400/80 mb-2">Buy Scenario (Year {inputs.years})</h4>
                 <div className="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
-                  <div className="text-white/60">Min: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.min)}</span></div>
-                  <div className="text-white/60">Max: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.max)}</span></div>
-                  <div className="text-white/60">P10: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.p10)}</span></div>
-                  <div className="text-white/60">P90: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.p90)}</span></div>
-                  <div className="text-white/60">Mean: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.mean)}</span></div>
-                  <div className="text-white/60">Median: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.p50)}</span></div>
+                  <div className="text-[var(--content-subtle)]">Min: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.min)}</span></div>
+                  <div className="text-[var(--content-subtle)]">Max: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.max)}</span></div>
+                  <div className="text-[var(--content-subtle)]">P10: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.p10)}</span></div>
+                  <div className="text-[var(--content-subtle)]">P90: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.p90)}</span></div>
+                  <div className="text-[var(--content-subtle)]">Mean: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.mean)}</span></div>
+                  <div className="text-[var(--content-subtle)]">Median: <span className="text-green-400">{formatCurrency(simResults.finalStats.wealthBuy.p50)}</span></div>
                 </div>
               </div>
               <div className="bg-red-900/10 rounded-lg p-3 sm:p-4 border border-red-500/20">
                 <h4 className="text-sm font-medium text-red-400/80 mb-2">Rent Scenario (Year {inputs.years})</h4>
                 <div className="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
-                  <div className="text-white/60">Min: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.min)}</span></div>
-                  <div className="text-white/60">Max: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.max)}</span></div>
-                  <div className="text-white/60">P10: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.p10)}</span></div>
-                  <div className="text-white/60">P90: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.p90)}</span></div>
-                  <div className="text-white/60">Mean: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.mean)}</span></div>
-                  <div className="text-white/60">Median: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.p50)}</span></div>
+                  <div className="text-[var(--content-subtle)]">Min: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.min)}</span></div>
+                  <div className="text-[var(--content-subtle)]">Max: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.max)}</span></div>
+                  <div className="text-[var(--content-subtle)]">P10: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.p10)}</span></div>
+                  <div className="text-[var(--content-subtle)]">P90: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.p90)}</span></div>
+                  <div className="text-[var(--content-subtle)]">Mean: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.mean)}</span></div>
+                  <div className="text-[var(--content-subtle)]">Median: <span className="text-red-400">{formatCurrency(simResults.finalStats.wealthRent.p50)}</span></div>
                 </div>
               </div>
             </div>
@@ -2419,7 +2419,7 @@ function HousePageInner() {
               <p>
                 <strong>Upside (P90):</strong> In the best 10% of scenarios, buying wins by {formatCurrency(simResults.finalStats.delta.p90)}.
               </p>
-              <p className="text-white/40 mt-4">
+              <p className="text-[var(--content-subtle)] mt-4">
                 Note: This simulation samples from normal distributions for both housing appreciation (μ={formatPercent(inputs.appreciationMean)}, σ={formatPercent(inputs.appreciationStdDev)}) 
                 and stock returns (μ={formatPercent(inputs.stockReturnMean)}, σ={formatPercent(inputs.stockReturnStdDev)}). 
                 Real returns have fat tails — extreme outcomes are more likely than this model suggests.
@@ -2441,7 +2441,7 @@ function HousePageInner() {
                 }}
                 disabled={isRunningSensitivity}
                 className="px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:cursor-not-allowed
-                           rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
+                           rounded-lg text-[var(--content)] font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningSensitivity ? (
                   <>
@@ -2467,7 +2467,7 @@ function HousePageInner() {
                 }}
                 disabled={isRunningBreakEven}
                 className="px-3 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed
-                           rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
+                           rounded-lg text-[var(--content)] font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningBreakEven ? (
                   <>
@@ -2493,7 +2493,7 @@ function HousePageInner() {
                 }}
                 disabled={isRunningWhatIf}
                 className="px-3 sm:px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:cursor-not-allowed
-                           rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
+                           rounded-lg text-[var(--content)] font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningWhatIf ? (
                   <>
@@ -2512,9 +2512,9 @@ function HousePageInner() {
             {/* What-If Sensitivity Results */}
             {whatIfResults && (
               <div className="mb-8">
-                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">What If? Scenarios</h4>
-                <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
-                  How do common changes affect your outcome? Base case: <span className="text-white">{formatCurrency(whatIfResults.baseP50Delta)}</span> median delta, <span className="text-white">{formatPercent(whatIfResults.baseWinRate)}</span> buy wins.
+                <h4 className="text-base sm:text-lg font-bold text-[var(--content)] mb-3 sm:mb-4">What If? Scenarios</h4>
+                <p className="text-[var(--content-subtle)] text-xs sm:text-sm mb-3 sm:mb-4">
+                  How do common changes affect your outcome? Base case: <span className="text-[var(--content)]">{formatCurrency(whatIfResults.baseP50Delta)}</span> median delta, <span className="text-[var(--content)]">{formatPercent(whatIfResults.baseWinRate)}</span> buy wins.
                 </p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -2523,10 +2523,10 @@ function HousePageInner() {
                       ? 'bg-green-900/20 border-green-500/30 hover:border-green-500/50' 
                       : scenario.direction === 'worse'
                         ? 'bg-red-900/20 border-red-500/30 hover:border-red-500/50'
-                        : 'bg-white/[0.02] border-white/[0.08] hover:border-white/20'
+                        : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border)]'
                     
-                    const deltaColor = scenario.deltaChange > 0 ? 'text-green-400' : scenario.deltaChange < 0 ? 'text-red-400' : 'text-white/60'
-                    const winRateColor = scenario.winRateChange > 0.02 ? 'text-green-400' : scenario.winRateChange < -0.02 ? 'text-red-400' : 'text-white/60'
+                    const deltaColor = scenario.deltaChange > 0 ? 'text-green-400' : scenario.deltaChange < 0 ? 'text-red-400' : 'text-[var(--content-subtle)]'
+                    const winRateColor = scenario.winRateChange > 0.02 ? 'text-green-400' : scenario.winRateChange < -0.02 ? 'text-red-400' : 'text-[var(--content-subtle)]'
                     
                     return (
                       <div 
@@ -2534,15 +2534,15 @@ function HousePageInner() {
                         className={`p-3 sm:p-4 rounded-xl border transition-colors ${bgColor}`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-white text-sm sm:text-base">{scenario.label}</span>
+                          <span className="font-medium text-[var(--content)] text-sm sm:text-base">{scenario.label}</span>
                           <span className={`text-xs sm:text-sm font-mono ${deltaColor}`}>
                             {scenario.deltaChange >= 0 ? '+' : ''}{formatCurrency(scenario.deltaChange)}
                           </span>
                         </div>
-                        <div className="text-white/50 text-xs sm:text-sm mb-2">{scenario.description}</div>
+                        <div className="text-[var(--content-subtle)] text-xs sm:text-sm mb-2">{scenario.description}</div>
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-white/40">
-                            P50: <span className="text-white/70">{formatCurrency(scenario.newP50Delta)}</span>
+                          <span className="text-[var(--content-subtle)]">
+                            P50: <span className="text-[var(--content-muted)]">{formatCurrency(scenario.newP50Delta)}</span>
                           </span>
                           <span className={winRateColor}>
                             Win: {formatPercent(scenario.newWinRate)} ({scenario.winRateChange >= 0 ? '+' : ''}{(scenario.winRateChange * 100).toFixed(1)}%)
@@ -2553,7 +2553,7 @@ function HousePageInner() {
                   })}
                 </div>
                 
-                <div className="mt-4 flex items-center gap-4 text-xs text-white/40">
+                <div className="mt-4 flex items-center gap-4 text-xs text-[var(--content-subtle)]">
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 rounded bg-green-500/30 border border-green-500/50" />
                     <span>Better for buying</span>
@@ -2563,7 +2563,7 @@ function HousePageInner() {
                     <span>Worse for buying</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded bg-white/10 border border-white/20" />
+                    <div className="w-3 h-3 rounded bg-[var(--surface-muted)] border border-[var(--border)]" />
                     <span>Minimal impact</span>
                   </div>
                 </div>
@@ -2573,8 +2573,8 @@ function HousePageInner() {
             {/* Sensitivity Analysis Results (Tornado Chart) */}
             {sensitivityResults && (
               <div className="mb-8">
-                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">Sensitivity Analysis</h4>
-                <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
+                <h4 className="text-base sm:text-lg font-bold text-[var(--content)] mb-3 sm:mb-4">Sensitivity Analysis</h4>
+                <p className="text-[var(--content-subtle)] text-xs sm:text-sm mb-3 sm:mb-4">
                   Which inputs swing the outcome most? Bars show P50 delta change when varying each parameter ±10-20%.
                 </p>
                 <div className="space-y-2 sm:space-y-3">
@@ -2587,7 +2587,7 @@ function HousePageInner() {
                     
                     return (
                       <div key={result.parameter} className="flex items-center gap-2 sm:gap-4">
-                        <div className="w-20 sm:w-32 text-xs sm:text-sm text-white/70 text-right shrink-0 truncate">
+                        <div className="w-20 sm:w-32 text-xs sm:text-sm text-[var(--content-muted)] text-right shrink-0 truncate">
                           {result.label}
                         </div>
                         <div className="flex-1 flex items-center h-5 sm:h-6">
@@ -2599,7 +2599,7 @@ function HousePageInner() {
                             />
                           </div>
                           {/* Center line */}
-                          <div className="w-px h-5 sm:h-6 bg-white/40" />
+                          <div className="w-px h-5 sm:h-6 bg-[var(--border)]" />
                           {/* Right bar (high value effect) */}
                           <div className="flex-1">
                             <div 
@@ -2608,16 +2608,16 @@ function HousePageInner() {
                             />
                           </div>
                         </div>
-                        <div className="w-16 sm:w-24 text-[10px] sm:text-xs text-white/50 shrink-0 text-right">
+                        <div className="w-16 sm:w-24 text-[10px] sm:text-xs text-[var(--content-subtle)] shrink-0 text-right">
                           ±{formatCurrency(result.impact / 2)}
                         </div>
                       </div>
                     )
                   })}
                 </div>
-                <div className="mt-3 sm:mt-4 flex justify-center gap-4 sm:gap-6 text-[10px] sm:text-xs text-white/40">
+                <div className="mt-3 sm:mt-4 flex justify-center gap-4 sm:gap-6 text-[10px] sm:text-xs text-[var(--content-subtle)]">
                   <span>← Lower value</span>
-                  <span className="text-white/60">|</span>
+                  <span className="text-[var(--content-subtle)]">|</span>
                   <span>Higher value →</span>
                 </div>
               </div>
@@ -2626,8 +2626,8 @@ function HousePageInner() {
             {/* Break-Even Surface (Heatmap) */}
             {breakEvenSurface && (
               <div>
-                <h4 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">Break-Even Surface</h4>
-                <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
+                <h4 className="text-base sm:text-lg font-bold text-[var(--content)] mb-3 sm:mb-4">Break-Even Surface</h4>
+                <p className="text-[var(--content-subtle)] text-xs sm:text-sm mb-3 sm:mb-4">
                   Win probability (buy vs rent) across {breakEvenSurface.xLabel} × {breakEvenSurface.yLabel}. 
                   Green = buy wins, Red = rent wins, Yellow = break-even.
                 </p>
@@ -2636,7 +2636,7 @@ function HousePageInner() {
                     {/* Y-axis label */}
                     <div className="flex">
                       <div className="w-14 sm:w-20" />
-                      <div className="flex-1 text-center text-[10px] sm:text-xs text-white/60 mb-1 sm:mb-2">
+                      <div className="flex-1 text-center text-[10px] sm:text-xs text-[var(--content-subtle)] mb-1 sm:mb-2">
                         {breakEvenSurface.xLabel}
                       </div>
                     </div>
@@ -2645,11 +2645,11 @@ function HousePageInner() {
                     <div className="flex">
                       {/* Y-axis */}
                       <div className="w-14 sm:w-20 flex flex-col justify-between pr-1 sm:pr-2 text-right">
-                        <div className="text-[10px] sm:text-xs text-white/60 -rotate-0">
+                        <div className="text-[10px] sm:text-xs text-[var(--content-subtle)] -rotate-0">
                           {breakEvenSurface.yLabel}
                         </div>
                         {breakEvenSurface.yValues.slice().reverse().map((y, i) => (
-                          <div key={i} className="text-[10px] sm:text-xs text-white/40 h-8 sm:h-10 flex items-center justify-end">
+                          <div key={i} className="text-[10px] sm:text-xs text-[var(--content-subtle)] h-8 sm:h-10 flex items-center justify-end">
                             {breakEvenSurface.yLabel.includes('%') 
                               ? `${y.toFixed(0)}%`
                               : breakEvenSurface.yLabel.includes('Rate')
@@ -2692,7 +2692,7 @@ function HousePageInner() {
                         {/* X-axis labels */}
                         <div className="flex mt-1">
                           {breakEvenSurface.xValues.map((x, i) => (
-                            <div key={i} className="w-9 sm:w-12 text-center text-[10px] sm:text-xs text-white/40">
+                            <div key={i} className="w-9 sm:w-12 text-center text-[10px] sm:text-xs text-[var(--content-subtle)]">
                               ${(x/1000).toFixed(0)}k
                             </div>
                           ))}
@@ -2702,7 +2702,7 @@ function HousePageInner() {
                   </div>
                 </div>
                 
-                <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-white/40">
+                <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-[var(--content-subtle)]">
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 sm:w-4 sm:h-4 rounded" style={{ backgroundColor: 'rgb(255, 0, 0)' }} />
                     <span>Rent wins</span>
@@ -2736,7 +2736,7 @@ function HousePageInner() {
       )}
       
       {!simResults && !isRunning && (
-        <div className="text-center py-12 text-white/40 animate-in fade-in duration-300">
+        <div className="text-center py-12 text-[var(--content-subtle)] animate-in fade-in duration-300">
           Configure parameters above and click &quot;Run Simulation&quot; to see Monte Carlo results.
         </div>
       )}
