@@ -18,6 +18,7 @@ import {
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
 import { ResultsSkeleton, SimulationProgress } from '@/components/Skeleton'
 import { NationalComparison } from '@/components/NationalComparison'
+import { ShareImage } from '@/components/ShareImage'
 
 // Wrapper component to handle searchParams with Suspense
 function HousePageContent() {
@@ -2188,6 +2189,11 @@ function HousePageInner() {
                 sub="P50"
                 delay={250}
               />
+            </div>
+            
+            {/* Share Button */}
+            <div className="flex justify-end mt-4">
+              <ShareImage inputs={inputs} results={simResults} />
             </div>
           </Section>
           
