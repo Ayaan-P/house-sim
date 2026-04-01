@@ -246,6 +246,13 @@ export interface SimulationRun {
   }
 }
 
+export interface RentalInvestmentMetrics {
+  cashOnCashReturn: number    // Annual cash flow / total cash invested
+  capRate: number             // NOI / property value
+  monthlyCashFlow: number     // Rent - all monthly expenses
+  passesOnePercentRule: boolean // Monthly rent >= 1% of purchase price
+}
+
 export interface SimulationSummary {
   // Percentile results for each year
   yearlyStats: {
@@ -261,6 +268,8 @@ export interface SimulationSummary {
     delta: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number; min: number; max: number }
     buyWinsProbability: number
   }
+  // BiggerPockets-style rental investment metrics
+  rentalMetrics: RentalInvestmentMetrics
   // All runs (for detailed analysis)
   runs: SimulationRun[]
 }
@@ -355,7 +364,10 @@ export function runSimulation(params: SimulationParams): SimulationSummary {
   const finalWealthBuy = runs.map(r => r.finalWealthBuy)
   const finalWealthRent = runs.map(r => r.finalWealthRent)
   const finalDelta = runs.map(r => r.finalDelta)
-  
+
+  // BiggerPockets-style rental investment metrics (deterministic, Year 1 snapshot)
+  const rentalMetrics = calculateRentalMetrics(params)
+
   return {
     yearlyStats,
     finalStats: {
@@ -391,8 +403,70 @@ export function runSimulation(params: SimulationParams): SimulationSummary {
       },
       buyWinsProbability: finalDelta.filter(d => d > 0).length / finalDelta.length,
     },
+    rentalMetrics,
     runs,
   }
+}
+
+function calculateRentalMetrics(params: SimulationParams): RentalInvestmentMetrics {
+  const {
+    homePrice, downPaymentPercent, mortgageRate, propertyTaxRate,
+    insuranceAnnual, houseHack, rentalIncome, vacancyRate,
+  } = params
+
+  // Monthly gross rent (from all rental units)
+  const units = params.units || []
+  const isMultiFamily = units.length > 0
+  let monthlyGrossRent: number
+  if (isMultiFamily) {
+    monthlyGrossRent = units.filter(u => !u.ownerOccupied).reduce((sum, u) => sum + u.monthlyRent, 0)
+  } else {
+    monthlyGrossRent = houseHack ? rentalIncome : 0
+  }
+
+  // Cash invested = down payment + closing costs
+  const downPayment = homePrice * (downPaymentPercent / 100)
+  const closingCosts = homePrice * (params.closingCostPercent / 100)
+  const cashInvested = downPayment + closingCosts
+
+  // Annual gross rent (vacancy-adjusted)
+  const annualGrossRent = monthlyGrossRent * 12 * (1 - (vacancyRate || 0))
+
+  // Operating expenses (NO mortgage) - for NOI calculation
+  const annualPropertyTax = homePrice * propertyTaxRate
+  const annualInsurance = insuranceAnnual
+  const annualMaintenance = params.maintenanceAnnual || 0
+  const annualHOA = (params.hoaMonthly || 0) * 12
+  const operatingExpenses = annualPropertyTax + annualInsurance + annualMaintenance + annualHOA
+
+  // NOI = annual rent - operating expenses (no mortgage)
+  const noi = annualGrossRent - operatingExpenses
+
+  // Monthly mortgage P&I
+  const loanAmount = homePrice - downPayment
+  const monthlyRate = mortgageRate / 12
+  const numPayments = 360
+  const monthlyPI = loanAmount > 0
+    ? loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1)
+    : 0
+  const annualDebtService = monthlyPI * 12
+
+  // Annual cash flow = NOI - annual mortgage P&I
+  const annualCashFlow = noi - annualDebtService
+
+  // Monthly cash flow
+  const monthlyCashFlow = annualCashFlow / 12
+
+  // Cash-on-Cash Return = annual cash flow / cash invested
+  const cashOnCashReturn = cashInvested > 0 ? annualCashFlow / cashInvested : 0
+
+  // Cap Rate = NOI / property value
+  const capRate = homePrice > 0 ? noi / homePrice : 0
+
+  // 1% Rule: monthly rent >= 1% of purchase price
+  const passesOnePercentRule = monthlyGrossRent >= homePrice * 0.01
+
+  return { cashOnCashReturn, capRate, monthlyCashFlow, passesOnePercentRule }
 }
 
 function simulateSingleRun(params: SimulationParams, runId: number): SimulationRun {

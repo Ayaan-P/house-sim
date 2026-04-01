@@ -19,6 +19,7 @@ import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
 import { ResultsSkeleton, SimulationProgress } from '@/components/Skeleton'
 import { NationalComparison } from '@/components/NationalComparison'
 import { ShareImage } from '@/components/ShareImage'
+import { QuickMetrics } from '@/components/QuickMetrics'
 
 // Wrapper component to handle searchParams with Suspense
 function HousePageContent() {
@@ -2145,6 +2146,9 @@ function HousePageInner() {
       {/* Results */}
       {simResults && (
         <div data-section="results" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Rental Investment Metrics */}
+          <QuickMetrics metrics={simResults.rentalMetrics} />
+
           {/* Summary Stats */}
           <Section title="Simulation Results">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
