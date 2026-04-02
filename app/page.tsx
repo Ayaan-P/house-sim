@@ -19,6 +19,7 @@ import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
 import { ResultsSkeleton, SimulationProgress } from '@/components/Skeleton'
 import { NationalComparison } from '@/components/NationalComparison'
 import { ShareImage } from '@/components/ShareImage'
+import { ExportPDF } from '@/components/ExportPDF'
 import { QuickMetrics } from '@/components/QuickMetrics'
 
 // Wrapper component to handle searchParams with Suspense
@@ -2195,8 +2196,9 @@ function HousePageInner() {
               />
             </div>
             
-            {/* Share Button */}
-            <div className="flex justify-end mt-4">
+            {/* Share & Export Buttons */}
+            <div className="flex justify-end gap-3 mt-4">
+              <ExportPDF inputs={inputs} results={simResults} />
               <ShareImage inputs={inputs} results={simResults} />
             </div>
           </Section>
