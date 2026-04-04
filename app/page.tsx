@@ -21,6 +21,7 @@ import { NationalComparison } from '@/components/NationalComparison'
 import { ShareImage } from '@/components/ShareImage'
 import { ExportPDF } from '@/components/ExportPDF'
 import { QuickMetrics } from '@/components/QuickMetrics'
+import { AmortizationChart } from '@/components/AmortizationChart'
 
 // Wrapper component to handle searchParams with Suspense
 function HousePageContent() {
@@ -2734,6 +2735,11 @@ function HousePageInner() {
                 </div>
               </div>
             )}
+          </Section>
+          
+          {/* Amortization Schedule Visualization */}
+          <Section title="📊 Amortization Schedule">
+            <AmortizationChart inputs={inputs} />
           </Section>
           
           {/* Math Explained Section */}
