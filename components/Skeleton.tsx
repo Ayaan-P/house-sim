@@ -239,7 +239,7 @@ export function LoadingSpinner({ message = 'Running simulation...' }: { message?
         {/* Outer ring */}
         <div className="w-16 h-16 border-4 border-border rounded-full" />
         {/* Spinning arc */}
-        <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin" />
+        <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-info rounded-full animate-spin" />
         {/* Inner pulse */}
         <div className="absolute inset-2 w-12 h-12 bg-blue-500/20 rounded-full animate-pulse" />
       </div>

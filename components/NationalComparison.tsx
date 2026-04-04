@@ -319,12 +319,12 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
           {/* Quick summary badges */}
           <div className="hidden sm:flex items-center gap-2">
             {betterCount > 0 && (
-              <span className="px-2 py-0.5 bg-green-500/20 border border-green-500/40 rounded-full text-green-600 dark:text-green-400 text-xs">
+              <span className="px-2 py-0.5 bg-success-muted border border-success/40 rounded-full text-success text-xs">
                 {betterCount} better
               </span>
             )}
             {worseCount > 0 && (
-              <span className="px-2 py-0.5 bg-red-500/20 border border-red-500/40 rounded-full text-red-600 dark:text-red-400 text-xs">
+              <span className="px-2 py-0.5 bg-error-muted border border-error/40 rounded-full text-error text-xs">
                 {worseCount} worse
               </span>
             )}
@@ -340,7 +340,7 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-surface-muted rounded-xl border border-border">
               <div className="text-center p-3 rounded-lg bg-indigo-900/30 dark:bg-indigo-900/30">
                 <div className="text-content-subtle text-sm mb-1">Your Scenario</div>
-                <div className={`text-2xl font-bold ${userResults.finalStats.delta.p50 > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <div className={`text-2xl font-bold ${userResults.finalStats.delta.p50 > 0 ? 'text-success' : 'text-error'}`}>
                   {userResults.finalStats.buyWinsProbability > 0.5 ? 'Buy wins' : 'Rent wins'} {(userResults.finalStats.buyWinsProbability * 100).toFixed(0)}%
                 </div>
                 <div className="text-content-muted text-sm mt-1">
@@ -350,7 +350,7 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
 
               <div className="text-center p-3 rounded-lg bg-purple-900/30 dark:bg-purple-900/30">
                 <div className="text-content-subtle text-sm mb-1">National Average</div>
-                <div className={`text-2xl font-bold ${nationalResults.finalStats.delta.p50 > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <div className={`text-2xl font-bold ${nationalResults.finalStats.delta.p50 > 0 ? 'text-success' : 'text-error'}`}>
                   {nationalResults.finalStats.buyWinsProbability > 0.5 ? 'Buy wins' : 'Rent wins'} {(nationalResults.finalStats.buyWinsProbability * 100).toFixed(0)}%
                 </div>
                 <div className="text-content-muted text-sm mt-1">
@@ -379,17 +379,17 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
                   key={metric.label}
                   className={`p-3 rounded-lg border transition-colors ${
                     metric.favorability === 'better'
-                      ? 'bg-green-900/10 border-green-500/30 hover:border-green-500/50'
+                      ? 'bg-success-muted border-success/30 hover:border-success/50'
                       : metric.favorability === 'worse'
-                        ? 'bg-red-900/10 border-red-500/30 hover:border-red-500/50'
+                        ? 'bg-error-muted border-error/30 hover:border-error/50'
                         : 'bg-surface-muted border-border hover:border-content-subtle'
                   }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-[150px]">
                       <span className={`text-sm font-medium ${
-                        metric.favorability === 'better' ? 'text-green-600 dark:text-green-400' :
-                        metric.favorability === 'worse' ? 'text-red-600 dark:text-red-400' : 'text-content-muted'
+                        metric.favorability === 'better' ? 'text-success' :
+                        metric.favorability === 'worse' ? 'text-error' : 'text-content-muted'
                       }`}>
                         {metric.label}
                       </span>
@@ -422,11 +422,11 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
           {/* Legend */}
           <div className="flex flex-wrap items-center gap-4 text-xs text-content-subtle pt-2 border-t border-border">
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-green-500/30 border border-green-500/50" />
+              <div className="w-3 h-3 rounded bg-success-muted border border-success/50" />
               <span>Favors buying</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-red-500/30 border border-red-500/50" />
+              <div className="w-3 h-3 rounded bg-error-muted border border-error/50" />
               <span>Favors renting</span>
             </div>
             <div className="flex items-center gap-1.5">

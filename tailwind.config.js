@@ -27,6 +27,22 @@ module.exports = {
           DEFAULT: 'var(--accent)',
           hover: 'var(--accent-hover)',
         },
+        success: {
+          DEFAULT: 'var(--success)',
+          muted: 'var(--success-muted)',
+        },
+        error: {
+          DEFAULT: 'var(--error)',
+          muted: 'var(--error-muted)',
+        },
+        warning: {
+          DEFAULT: 'var(--warning)',
+          muted: 'var(--warning-muted)',
+        },
+        info: {
+          DEFAULT: 'var(--info)',
+          muted: 'var(--info-muted)',
+        },
       },
     },
   },

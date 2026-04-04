@@ -224,12 +224,12 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
         </div>
         <div className="bg-[var(--surface)] rounded-lg p-3 border border-[var(--border)]">
           <div className="text-[var(--content-subtle)] text-xs mb-1">Equity (Yr {showYears})</div>
-          <div className="text-green-400 text-lg font-bold font-mono">{formatCurrency(equityAtEnd)}</div>
+          <div className="text-success text-lg font-bold font-mono">{formatCurrency(equityAtEnd)}</div>
           <div className="text-[var(--content-subtle)] text-[10px]">{payoffProgress.toFixed(1)}% paid</div>
         </div>
         <div className="bg-[var(--surface)] rounded-lg p-3 border border-[var(--border)]">
           <div className="text-[var(--content-subtle)] text-xs mb-1">Interest (Yr {showYears})</div>
-          <div className="text-red-400 text-lg font-bold font-mono">{formatCurrency(interestPaid)}</div>
+          <div className="text-error text-lg font-bold font-mono">{formatCurrency(interestPaid)}</div>
         </div>
         <div className="bg-[var(--surface)] rounded-lg p-3 border border-[var(--border)]">
           <div className="text-[var(--content-subtle)] text-xs mb-1">Remaining Balance</div>
@@ -239,11 +239,11 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
 
       {/* Key Insight */}
       {crossoverYear && crossoverYear <= 30 && (
-        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+        <div className="bg-info-muted border border-info/30 rounded-lg p-3">
           <div className="flex items-center gap-2">
-            <span className="text-blue-400 text-lg">💡</span>
+            <span className="text-info text-lg">💡</span>
             <span className="text-[var(--content-muted)] text-sm">
-              <strong className="text-blue-400">Year {crossoverYear}</strong>: Your monthly payment starts going more to principal than interest.
+              <strong className="text-info">Year {crossoverYear}</strong>: Your monthly payment starts going more to principal than interest.
               {crossoverYear <= showYears && (
                 <span className="text-[var(--content-subtle)]"> (within your horizon!)</span>
               )}
@@ -461,19 +461,19 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
               {yearlyData.map((y) => (
                 <tr
                   key={y.year}
-                  className={`border-b border-border ${y.year === (inputs.years || 10) ? 'bg-blue-900/20' : ''}`}
+                  className={`border-b border-border ${y.year === (inputs.years || 10) ? 'bg-info-muted' : ''}`}
                 >
                   <td className="py-1.5 pr-4 font-medium">{y.year}</td>
-                  <td className="text-right pr-4 text-green-400">{formatCurrency(y.totalPrincipal)}</td>
-                  <td className="text-right pr-4 text-red-400">{formatCurrency(y.totalInterest)}</td>
+                  <td className="text-right pr-4 text-success">{formatCurrency(y.totalPrincipal)}</td>
+                  <td className="text-right pr-4 text-error">{formatCurrency(y.totalInterest)}</td>
                   <td className="text-right pr-4">
                     <div className="flex items-center justify-end gap-1">
                       <div 
-                        className="h-2 bg-green-500 rounded-l"
+                        className="h-2 bg-success rounded-l"
                         style={{ width: `${Math.min(y.principalPercent, 100) * 0.5}px` }}
                       />
                       <div 
-                        className="h-2 bg-red-500 rounded-r"
+                        className="h-2 bg-error rounded-r"
                         style={{ width: `${Math.min(100 - y.principalPercent, 100) * 0.5}px` }}
                       />
                       <span className="text-[var(--content-subtle)] text-xs ml-1">
@@ -482,7 +482,7 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
                     </div>
                   </td>
                   <td className="text-right pr-4 text-[var(--content-muted)]">{formatCurrency(y.endingBalance)}</td>
-                  <td className="text-right text-green-400 font-medium">{formatCurrency(y.cumulativePrincipal)}</td>
+                  <td className="text-right text-success font-medium">{formatCurrency(y.cumulativePrincipal)}</td>
                 </tr>
               ))}
             </tbody>
@@ -500,7 +500,7 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
           </div>
           <div>
             <div className="text-[var(--content-subtle)] text-xs">Interest</div>
-            <div className="text-red-400 font-bold font-mono">{formatCurrency(schedule.totals.totalInterest)}</div>
+            <div className="text-error font-bold font-mono">{formatCurrency(schedule.totals.totalInterest)}</div>
           </div>
           <div>
             <div className="text-[var(--content-subtle)] text-xs">Total Paid</div>

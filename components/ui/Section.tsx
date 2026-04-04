@@ -36,13 +36,13 @@ export function Stat({ label, value, sub, color = 'default' }: {
   label: string
   value: string
   sub?: string
-  color?: 'default' | 'green' | 'red' | 'blue'
+  color?: 'default' | 'success' | 'error' | 'info'
 }) {
   const colorClass = {
     default: 'text-content',
-    green: 'text-green-500 dark:text-green-400',
-    red: 'text-red-500 dark:text-red-400',
-    blue: 'text-blue-500 dark:text-blue-400',
+    success: 'text-success',
+    error: 'text-error',
+    info: 'text-info',
   }[color]
 
   return (
