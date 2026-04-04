@@ -304,7 +304,7 @@ export function ShareImage({ inputs, results }: ShareImageProps) {
           </div>
           
           {/* Assumptions */}
-          <div className="bg-white/[0.03] rounded-xl p-3 border border-white/10 mb-4">
+          <div className="bg-white/5 rounded-xl p-3 border border-white/10 mb-4">
             <div className="grid grid-cols-4 gap-2 text-center text-xs">
               <div>
                 <div className="text-white/40">Appreciation</div>
@@ -340,30 +340,30 @@ export function ShareImage({ inputs, results }: ShareImageProps) {
       {/* Modal for sharing */}
       {showModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 rounded-2xl border border-white/10 max-w-2xl w-full max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <h3 className="text-white font-bold text-lg">Share Your Results</h3>
+          <div className="bg-surface rounded-2xl border border-border max-w-2xl w-full max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <h3 className="text-content font-bold text-lg">Share Your Results</h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-white/50 hover:text-white transition-colors p-1"
+                className="text-content-subtle hover:text-content transition-colors p-1"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            
+
             <div className="p-4 overflow-y-auto max-h-[60vh]">
               {generatedImage && (
                 <img
                   src={generatedImage}
                   alt="Simulation Results"
-                  className="w-full rounded-xl border border-white/10"
+                  className="w-full rounded-xl border border-border"
                 />
               )}
             </div>
-            
-            <div className="p-4 border-t border-white/10 flex flex-wrap gap-3">
+
+            <div className="p-4 border-t border-border flex flex-wrap gap-3">
               <button
                 onClick={downloadImage}
                 className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-medium text-sm transition-colors"
@@ -377,9 +377,9 @@ export function ShareImage({ inputs, results }: ShareImageProps) {
               <button
                 onClick={copyToClipboard}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
-                  copied 
+                  copied
                     ? 'bg-green-600 text-white'
-                    : 'bg-white/10 hover:bg-white/20 text-white'
+                    : 'bg-surface-muted hover:bg-border text-content'
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -406,7 +406,7 @@ export function ShareImage({ inputs, results }: ShareImageProps) {
               
               <button
                 onClick={() => setShowModal(false)}
-                className="ml-auto px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-white/70 font-medium text-sm transition-colors"
+                className="ml-auto px-4 py-2.5 bg-surface-muted hover:bg-border rounded-xl text-content-muted font-medium text-sm transition-colors"
               >
                 Close
               </button>

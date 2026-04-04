@@ -300,7 +300,7 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
   }
   
   return (
-    <div className="bg-gradient-to-br from-indigo-900/20 to-purple-900/20 border border-indigo-500/30 rounded-xl p-4">
+    <div className="bg-gradient-to-br from-indigo-900/20 to-purple-900/20 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-500/30 rounded-xl p-4">
       <button
         onClick={() => {
           setIsExpanded(!isExpanded)
@@ -311,25 +311,25 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
         <div className="flex items-center gap-3">
           <span className="text-2xl">🇺🇸</span>
           <div>
-            <h3 className="text-white font-bold">Compare to National Average</h3>
-            <p className="text-white/50 text-sm">See how your scenario stacks up against the typical US homebuyer</p>
+            <h3 className="text-content font-bold">Compare to National Average</h3>
+            <p className="text-content-subtle text-sm">See how your scenario stacks up against the typical US homebuyer</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {/* Quick summary badges */}
           <div className="hidden sm:flex items-center gap-2">
             {betterCount > 0 && (
-              <span className="px-2 py-0.5 bg-green-500/20 border border-green-500/40 rounded-full text-green-400 text-xs">
+              <span className="px-2 py-0.5 bg-green-500/20 border border-green-500/40 rounded-full text-green-600 dark:text-green-400 text-xs">
                 {betterCount} better
               </span>
             )}
             {worseCount > 0 && (
-              <span className="px-2 py-0.5 bg-red-500/20 border border-red-500/40 rounded-full text-red-400 text-xs">
+              <span className="px-2 py-0.5 bg-red-500/20 border border-red-500/40 rounded-full text-red-600 dark:text-red-400 text-xs">
                 {worseCount} worse
               </span>
             )}
           </div>
-          <span className={`transform transition-transform text-white/50 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+          <span className={`transform transition-transform text-content-subtle ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
         </div>
       </button>
       
@@ -337,31 +337,31 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
         <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Overview comparison */}
           {userResults && nationalResults && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white/[0.02] rounded-xl border border-white/[0.08]">
-              <div className="text-center p-3 rounded-lg bg-indigo-900/30">
-                <div className="text-white/50 text-sm mb-1">Your Scenario</div>
-                <div className={`text-2xl font-bold ${userResults.finalStats.delta.p50 > 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-surface-muted rounded-xl border border-border">
+              <div className="text-center p-3 rounded-lg bg-indigo-900/30 dark:bg-indigo-900/30">
+                <div className="text-content-subtle text-sm mb-1">Your Scenario</div>
+                <div className={`text-2xl font-bold ${userResults.finalStats.delta.p50 > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {userResults.finalStats.buyWinsProbability > 0.5 ? 'Buy wins' : 'Rent wins'} {(userResults.finalStats.buyWinsProbability * 100).toFixed(0)}%
                 </div>
-                <div className="text-white/60 text-sm mt-1">
+                <div className="text-content-muted text-sm mt-1">
                   P50 Delta: {formatCurrency(userResults.finalStats.delta.p50)}
                 </div>
               </div>
-              
-              <div className="text-center p-3 rounded-lg bg-purple-900/30">
-                <div className="text-white/50 text-sm mb-1">National Average</div>
-                <div className={`text-2xl font-bold ${nationalResults.finalStats.delta.p50 > 0 ? 'text-green-400' : 'text-red-400'}`}>
+
+              <div className="text-center p-3 rounded-lg bg-purple-900/30 dark:bg-purple-900/30">
+                <div className="text-content-subtle text-sm mb-1">National Average</div>
+                <div className={`text-2xl font-bold ${nationalResults.finalStats.delta.p50 > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {nationalResults.finalStats.buyWinsProbability > 0.5 ? 'Buy wins' : 'Rent wins'} {(nationalResults.finalStats.buyWinsProbability * 100).toFixed(0)}%
                 </div>
-                <div className="text-white/60 text-sm mt-1">
+                <div className="text-content-muted text-sm mt-1">
                   P50 Delta: {formatCurrency(nationalResults.finalStats.delta.p50)}
                 </div>
               </div>
             </div>
           )}
-          
+
           {isRunning && (
-            <div className="text-center py-4 text-white/50">
+            <div className="text-center py-4 text-content-subtle">
               <svg className="animate-spin h-5 w-5 mx-auto mb-2" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -369,10 +369,10 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
               Running national average simulation...
             </div>
           )}
-          
+
           {/* Metric comparison table */}
           <div className="space-y-2">
-            <h4 className="text-white/70 text-sm font-medium">Input Comparison</h4>
+            <h4 className="text-content-muted text-sm font-medium">Input Comparison</h4>
             <div className="grid grid-cols-1 gap-2">
               {metrics.map((metric) => (
                 <div
@@ -382,47 +382,45 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
                       ? 'bg-green-900/10 border-green-500/30 hover:border-green-500/50'
                       : metric.favorability === 'worse'
                         ? 'bg-red-900/10 border-red-500/30 hover:border-red-500/50'
-                        : 'bg-white/[0.02] border-white/[0.08] hover:border-white/20'
+                        : 'bg-surface-muted border-border hover:border-content-subtle'
                   }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-[150px]">
                       <span className={`text-sm font-medium ${
-                        metric.favorability === 'better' ? 'text-green-400' :
-                        metric.favorability === 'worse' ? 'text-red-400' : 'text-white/80'
+                        metric.favorability === 'better' ? 'text-green-600 dark:text-green-400' :
+                        metric.favorability === 'worse' ? 'text-red-600 dark:text-red-400' : 'text-content-muted'
                       }`}>
                         {metric.label}
                       </span>
                     </div>
-                    
+
                     <div className="flex items-center gap-4 text-sm">
                       <div className="text-right">
-                        <span className="text-white/40">You: </span>
-                        <span className="text-white font-mono">{metric.userValue}</span>
+                        <span className="text-content-subtle">You: </span>
+                        <span className="text-content font-mono">{metric.userValue}</span>
                       </div>
-                      <div className="text-white/30">vs</div>
+                      <div className="text-content-subtle">vs</div>
                       <div className="text-right">
-                        <span className="text-white/40">US: </span>
-                        <span className="text-white/60 font-mono">{metric.nationalValue}</span>
+                        <span className="text-content-subtle">US: </span>
+                        <span className="text-content-muted font-mono">{metric.nationalValue}</span>
                       </div>
-                      <div className={`w-16 text-right font-mono text-xs ${
-                        metric.percentDiff > 0 ? 'text-white/50' : 'text-white/50'
-                      }`}>
+                      <div className="w-16 text-right font-mono text-xs text-content-subtle">
                         {metric.percentDiff >= 0 ? '+' : ''}{(metric.percentDiff * 100).toFixed(0)}%
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="text-white/40 text-xs mt-1.5">
+
+                  <div className="text-content-subtle text-xs mt-1.5">
                     {metric.insight}
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          
+
           {/* Legend */}
-          <div className="flex flex-wrap items-center gap-4 text-xs text-white/40 pt-2 border-t border-white/[0.06]">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-content-subtle pt-2 border-t border-border">
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-green-500/30 border border-green-500/50" />
               <span>Favors buying</span>
@@ -432,7 +430,7 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
               <span>Favors renting</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-white/10 border border-white/20" />
+              <div className="w-3 h-3 rounded bg-surface-muted border border-border" />
               <span>Neutral</span>
             </div>
             <span className="ml-auto">

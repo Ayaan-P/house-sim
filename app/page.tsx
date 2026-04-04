@@ -1828,7 +1828,7 @@ function HousePageInner() {
                 }}
                 className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   opt.active
-                    ? 'bg-[#84BABF] text-[var(--content)] shadow-lg shadow-[#84BABF]/20'
+                    ? 'bg-accent text-white dark:text-[var(--content)] shadow-lg shadow-accent/20'
                     : 'bg-[var(--surface)] text-[var(--content-subtle)] hover:bg-[var(--surface-muted)] hover:text-[var(--content-muted)]'
                 }`}
               >
@@ -2373,7 +2373,7 @@ function HousePageInner() {
                 </thead>
                 <tbody>
                   {simResults.yearlyStats.map((y) => (
-                    <tr key={y.year} className="border-b border-gray-800">
+                    <tr key={y.year} className="border-b border-border">
                       <td className="py-1.5">{y.year}</td>
                       <td className="text-right text-green-400/70">{formatCurrency(y.wealthBuy.p10)}</td>
                       <td className="text-right text-green-400">{formatCurrency(y.wealthBuy.p50)}</td>
@@ -2457,8 +2457,8 @@ function HousePageInner() {
                   }, 50)
                 }}
                 disabled={isRunningSensitivity}
-                className="px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:cursor-not-allowed
-                           rounded-lg text-[var(--content)] font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
+                className="px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed
+                           rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningSensitivity ? (
                   <>
@@ -2483,8 +2483,8 @@ function HousePageInner() {
                   }, 50)
                 }}
                 disabled={isRunningBreakEven}
-                className="px-3 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed
-                           rounded-lg text-[var(--content)] font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
+                className="px-3 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed
+                           rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningBreakEven ? (
                   <>
@@ -2509,8 +2509,8 @@ function HousePageInner() {
                   }, 50)
                 }}
                 disabled={isRunningWhatIf}
-                className="px-3 sm:px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:cursor-not-allowed
-                           rounded-lg text-[var(--content)] font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
+                className="px-3 sm:px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed
+                           rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningWhatIf ? (
                   <>

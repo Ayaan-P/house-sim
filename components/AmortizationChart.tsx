@@ -259,7 +259,7 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
             onClick={() => setViewMode('yearly')}
             className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
               viewMode === 'yearly'
-                ? 'bg-[#84BABF] text-[var(--content)]'
+                ? 'bg-accent text-white dark:text-[var(--content)]'
                 : 'text-[var(--content-subtle)] hover:text-[var(--content-muted)]'
             }`}
           >
@@ -269,7 +269,7 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
             onClick={() => setViewMode('monthly')}
             className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
               viewMode === 'monthly'
-                ? 'bg-[#84BABF] text-[var(--content)]'
+                ? 'bg-accent text-white dark:text-[var(--content)]'
                 : 'text-[var(--content-subtle)] hover:text-[var(--content-muted)]'
             }`}
           >
@@ -282,7 +282,7 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
             onClick={() => setChartType('stacked')}
             className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
               chartType === 'stacked'
-                ? 'bg-[#84BABF] text-[var(--content)]'
+                ? 'bg-accent text-white dark:text-[var(--content)]'
                 : 'text-[var(--content-subtle)] hover:text-[var(--content-muted)]'
             }`}
           >
@@ -292,7 +292,7 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
             onClick={() => setChartType('cumulative')}
             className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
               chartType === 'cumulative'
-                ? 'bg-[#84BABF] text-[var(--content)]'
+                ? 'bg-accent text-white dark:text-[var(--content)]'
                 : 'text-[var(--content-subtle)] hover:text-[var(--content-muted)]'
             }`}
           >
@@ -302,7 +302,7 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
             onClick={() => setChartType('balance')}
             className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
               chartType === 'balance'
-                ? 'bg-[#84BABF] text-[var(--content)]'
+                ? 'bg-accent text-white dark:text-[var(--content)]'
                 : 'text-[var(--content-subtle)] hover:text-[var(--content-muted)]'
             }`}
           >
@@ -459,9 +459,9 @@ export function AmortizationChart({ inputs }: AmortizationChartProps) {
             </thead>
             <tbody>
               {yearlyData.map((y) => (
-                <tr 
-                  key={y.year} 
-                  className={`border-b border-gray-800 ${y.year === (inputs.years || 10) ? 'bg-blue-900/20' : ''}`}
+                <tr
+                  key={y.year}
+                  className={`border-b border-border ${y.year === (inputs.years || 10) ? 'bg-blue-900/20' : ''}`}
                 >
                   <td className="py-1.5 pr-4 font-medium">{y.year}</td>
                   <td className="text-right pr-4 text-green-400">{formatCurrency(y.totalPrincipal)}</td>
