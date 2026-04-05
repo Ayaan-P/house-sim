@@ -1,19 +1,31 @@
 import Stripe from 'stripe'
 
-// Stripe configuration
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY!
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!
-
 // HouseSim Pro pricing
 export const HOUSESIM_PRO_PRICE_ID = process.env.STRIPE_PRICE_ID || 'price_housesim_pro' // Will be set after creating product
 
-export const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  // @ts-expect-error - using latest API
-  apiVersion: '2025-02-24.acacia',
-})
+// Lazy-initialize Stripe to avoid build-time errors when env vars aren't available
+let _stripe: Stripe | null = null
+
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    const secretKey = process.env.STRIPE_SECRET_KEY
+    if (!secretKey) {
+      throw new Error('STRIPE_SECRET_KEY environment variable is not set')
+    }
+    _stripe = new Stripe(secretKey, {
+      // @ts-expect-error - using latest API
+      apiVersion: '2025-02-24.acacia',
+    })
+  }
+  return _stripe
+}
 
 export function getStripeWebhookSecret(): string {
-  return STRIPE_WEBHOOK_SECRET
+  const secret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!secret) {
+    throw new Error('STRIPE_WEBHOOK_SECRET environment variable is not set')
+  }
+  return secret
 }
 
 // Create a Stripe checkout session for HouseSim Pro subscription
@@ -62,7 +74,7 @@ export async function createCheckoutSession(params: {
     sessionParams.customer = params.customerId
   }
 
-  return stripe.checkout.sessions.create(sessionParams)
+  return getStripe().checkout.sessions.create(sessionParams)
 }
 
 // Get or create a Stripe customer for a user
@@ -72,7 +84,7 @@ export async function getOrCreateCustomer(params: {
   name?: string
 }): Promise<Stripe.Customer> {
   // Check if customer already exists
-  const customers = await stripe.customers.list({
+  const customers = await getStripe().customers.list({
     email: params.email,
     limit: 1,
   })
@@ -82,7 +94,7 @@ export async function getOrCreateCustomer(params: {
   }
 
   // Create new customer
-  return stripe.customers.create({
+  return getStripe().customers.create({
     email: params.email,
     name: params.name,
     metadata: {
@@ -93,12 +105,12 @@ export async function getOrCreateCustomer(params: {
 
 // Retrieve a subscription by ID
 export async function getSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
-  return stripe.subscriptions.retrieve(subscriptionId)
+  return getStripe().subscriptions.retrieve(subscriptionId)
 }
 
 // Cancel a subscription
 export async function cancelSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
-  return stripe.subscriptions.cancel(subscriptionId)
+  return getStripe().subscriptions.cancel(subscriptionId)
 }
 
 // Create a billing portal session for managing subscription
@@ -106,7 +118,7 @@ export async function createBillingPortalSession(params: {
   customerId: string
   returnUrl: string
 }): Promise<Stripe.BillingPortal.Session> {
-  return stripe.billingPortal.sessions.create({
+  return getStripe().billingPortal.sessions.create({
     customer: params.customerId,
     return_url: params.returnUrl,
   })

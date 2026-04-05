@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe, getStripeWebhookSecret } from '@/lib/stripe'
+import { getStripe, getStripeWebhookSecret } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = 'https://qbuhjokiwkfuphboihug.supabase.co'
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   let event
 
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       body,
       signature,
       getStripeWebhookSecret()
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
         // Get the subscription details
         const subscriptionId = session.subscription as string
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId) as unknown as StripeSubscription
+        const subscription = await getStripe().subscriptions.retrieve(subscriptionId) as unknown as StripeSubscription
 
         // Update or create subscription record
         const { error } = await supabase
