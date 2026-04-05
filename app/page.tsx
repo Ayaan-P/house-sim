@@ -22,6 +22,7 @@ import { ShareImage } from '@/components/ShareImage'
 import { ExportPDF } from '@/components/ExportPDF'
 import { QuickMetrics } from '@/components/QuickMetrics'
 import { AmortizationChart } from '@/components/AmortizationChart'
+import { WealthTimelineChart } from '@/components/WealthTimelineChart'
 
 // Wrapper component to handle searchParams with Suspense
 function HousePageContent() {
@@ -2737,6 +2738,11 @@ function HousePageInner() {
             )}
           </Section>
           
+          {/* Wealth Timeline - Rent vs Buy over time */}
+          <Section title="📈 Wealth Over Time">
+            <WealthTimelineChart inputs={inputs} simResults={simResults} />
+          </Section>
+
           {/* Amortization Schedule Visualization */}
           <Section title="📊 Amortization Schedule">
             <AmortizationChart inputs={inputs} />
