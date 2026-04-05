@@ -300,7 +300,7 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
   }
   
   return (
-    <div className="bg-gradient-to-br from-indigo-900/20 to-purple-900/20 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-500/30 rounded-xl p-4">
+    <div className="bg-info-muted border border-info/30 rounded-xl p-4">
       <button
         onClick={() => {
           setIsExpanded(!isExpanded)
@@ -338,7 +338,7 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
           {/* Overview comparison */}
           {userResults && nationalResults && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-surface-muted rounded-xl border border-border">
-              <div className="text-center p-3 rounded-lg bg-indigo-900/30 dark:bg-indigo-900/30">
+              <div className="text-center p-3 rounded-lg bg-info-muted">
                 <div className="text-content-subtle text-sm mb-1">Your Scenario</div>
                 <div className={`text-2xl font-bold ${userResults.finalStats.delta.p50 > 0 ? 'text-success' : 'text-error'}`}>
                   {userResults.finalStats.buyWinsProbability > 0.5 ? 'Buy wins' : 'Rent wins'} {(userResults.finalStats.buyWinsProbability * 100).toFixed(0)}%
@@ -348,7 +348,7 @@ export function NationalComparison({ userParams, userResults }: NationalComparis
                 </div>
               </div>
 
-              <div className="text-center p-3 rounded-lg bg-purple-900/30 dark:bg-purple-900/30">
+              <div className="text-center p-3 rounded-lg bg-primary-muted">
                 <div className="text-content-subtle text-sm mb-1">National Average</div>
                 <div className={`text-2xl font-bold ${nationalResults.finalStats.delta.p50 > 0 ? 'text-success' : 'text-error'}`}>
                   {nationalResults.finalStats.buyWinsProbability > 0.5 ? 'Buy wins' : 'Rent wins'} {(nationalResults.finalStats.buyWinsProbability * 100).toFixed(0)}%

@@ -92,7 +92,7 @@ export function UpgradeButton() {
     <button
       onClick={handleUpgrade}
       disabled={isLoading}
-      className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-lg transition-all shadow-lg shadow-indigo-500/25"
+      className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg transition-all shadow-lg shadow-primary/25"
     >
       {isLoading ? (
         <>

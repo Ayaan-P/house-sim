@@ -580,7 +580,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
         </button>
         <button
           onClick={shareUrl}
-          className={`px-4 py-2 ${copied ? 'bg-success' : 'bg-purple-600 hover:bg-purple-700'} text-[var(--content)] rounded-xl border ${copied ? 'border-success' : 'border-purple-500'} transition-colors flex items-center gap-2`}
+          className={`px-4 py-2 ${copied ? 'bg-success' : 'bg-primary hover:bg-primary-hover'} text-white rounded-xl border ${copied ? 'border-success' : 'border-primary'} transition-colors flex items-center gap-2`}
           title="Copy shareable link"
         >
           <span>{copied ? '✓' : '🔗'}</span>
@@ -638,8 +638,8 @@ Primary Residence Exemption,$250k/$500k,Section 121
           </div>
           
           {/* Step 2: Monthly Mortgage */}
-          <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-xl">
-            <h4 className="text-purple-400 font-bold mb-3">Step 2: Your Mortgage Payment</h4>
+          <div className="p-4 bg-primary-muted border border-primary/30 rounded-xl">
+            <h4 className="text-primary font-bold mb-3">Step 2: Your Mortgage Payment</h4>
             <div className="space-y-2 text-[var(--content-muted)]">
               <div className="text-[var(--content-subtle)] text-xs mb-2">
                 Formula: P = L × [r(1+r)ⁿ] / [(1+r)ⁿ - 1]
@@ -658,7 +658,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 <span>Number of Payments (n = 30 years × 12)</span>
                 <span className="font-mono">360</span>
               </div>
-              <div className="flex justify-between border-t border-[var(--border)] pt-2 text-purple-400">
+              <div className="flex justify-between border-t border-[var(--border)] pt-2 text-primary">
                 <span className="font-bold">Monthly P&I Payment</span>
                 <span className="font-mono font-bold">{formatCurrency(monthlyPI)}/mo</span>
               </div>
@@ -735,8 +735,8 @@ Primary Residence Exemption,$250k/$500k,Section 121
           </div>
           
           {/* Step 4: Tax Math */}
-          <div className="p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
-            <h4 className="text-yellow-400 font-bold mb-3">Step 4: Tax Deductions Explained</h4>
+          <div className="p-4 bg-warning-muted border border-warning/30 rounded-xl">
+            <h4 className="text-warning font-bold mb-3">Step 4: Tax Deductions Explained</h4>
             <div className="space-y-2 text-[var(--content-muted)]">
               {hasRental && (
                 <div className="text-[var(--content-subtle)] text-xs mb-2">
@@ -769,7 +769,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 </span>
               </div>
               {ownerTaxBenefit > 0 && (
-                <div className="flex justify-between pl-4 text-yellow-400">
+                <div className="flex justify-between pl-4 text-warning">
                   <span>Owner Tax Savings</span>
                   <span className="font-mono">{formatCurrency(ownerTaxBenefit)}</span>
                 </div>
@@ -797,7 +797,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                   </div>
                   {passiveLoss > 0 && (
                     <>
-                      <div className="flex justify-between pl-4 text-orange-400">
+                      <div className="flex justify-between pl-4 text-warning">
                         <span>Passive Loss (expenses − income)</span>
                         <span className="font-mono">{formatCurrency(passiveLoss)}</span>
                       </div>
@@ -812,14 +812,14 @@ Primary Residence Exemption,$250k/$500k,Section 121
                       )}
                     </>
                   )}
-                  <div className="flex justify-between pl-4 text-yellow-400">
+                  <div className="flex justify-between pl-4 text-warning">
                     <span>Rental Tax Savings</span>
                     <span className="font-mono">{formatCurrency(rentalTaxBenefit)}</span>
                   </div>
                 </>
               )}
               
-              <div className="flex justify-between border-t border-[var(--border)] pt-2 text-yellow-400">
+              <div className="flex justify-between border-t border-[var(--border)] pt-2 text-warning">
                 <span className="font-bold">TOTAL TAX SAVINGS</span>
                 <span className="font-mono font-bold">{formatCurrency(totalTaxBenefit)}/yr</span>
               </div>
@@ -863,11 +863,11 @@ Primary Residence Exemption,$250k/$500k,Section 121
           </div>
           
           {/* Step 6: Distributions */}
-          <div className="p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-xl">
-            <h4 className="text-cyan-400 font-bold mb-3">Step 6: Return Distributions</h4>
+          <div className="p-4 bg-info-muted border border-info/30 rounded-xl">
+            <h4 className="text-info font-bold mb-3">Step 6: Return Distributions</h4>
             <div className="space-y-3 text-[var(--content-muted)]">
               <p>
-                We run <span className="text-cyan-400 font-bold">{inputs.numSimulations.toLocaleString()}</span> simulations. 
+                We run <span className="text-info font-bold">{inputs.numSimulations.toLocaleString()}</span> simulations. 
                 In each one, we randomly sample:
               </p>
               <div className="grid grid-cols-2 gap-4">
@@ -1111,7 +1111,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-[var(--content-subtle)] whitespace-nowrap">P10</div>
                 )}
                 {idx > 0 && histogramData.bins[idx - 1].cumulativePercentile < 50 && bin.cumulativePercentile >= 50 && (
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-yellow-400 font-bold whitespace-nowrap">P50</div>
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-warning font-bold whitespace-nowrap">P50</div>
                 )}
                 {idx > 0 && histogramData.bins[idx - 1].cumulativePercentile < 90 && bin.cumulativePercentile >= 90 && (
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-[var(--content-subtle)] whitespace-nowrap">P90</div>
@@ -1194,7 +1194,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
             </div>
             <div className="bg-[var(--surface)] rounded-lg p-2">
               <div className="text-[var(--content-subtle)] text-xs">Outcome</div>
-              <div className={`font-medium ${selectedBin.rangeMax < 0 ? 'text-error' : selectedBin.rangeMin > 0 ? 'text-success' : 'text-yellow-400'}`}>
+              <div className={`font-medium ${selectedBin.rangeMax < 0 ? 'text-error' : selectedBin.rangeMin > 0 ? 'text-success' : 'text-warning'}`}>
                 {selectedBin.rangeMax < 0 ? 'Rent wins' : selectedBin.rangeMin > 0 ? 'Buy wins' : 'Mixed'}
               </div>
             </div>
@@ -1962,13 +1962,13 @@ function HousePageInner() {
         {showStrategies && (
           <div className="mt-4 space-y-4">
             {/* First-Time Homebuyer */}
-            <div className="p-4 bg-violet-900/10 border border-violet-500/20 rounded-xl">
+            <div className="p-4 bg-info-muted border border-info/20 rounded-xl">
               <label className="flex items-center gap-3 cursor-pointer">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={inputs.firstTimeHomeBuyer?.enabled || false}
-                  onChange={(e) => update('firstTimeHomeBuyer', { 
-                    ...inputs.firstTimeHomeBuyer, 
+                  onChange={(e) => update('firstTimeHomeBuyer', {
+                    ...inputs.firstTimeHomeBuyer,
                     enabled: e.target.checked,
                     noPMI: e.target.checked,
                     downPaymentAssistance: 0,
@@ -1976,9 +1976,9 @@ function HousePageInner() {
                     rateDiscount: 0.0025,
                     taxCredit: 0,
                   })}
-                  className="w-4 h-4 rounded border-violet-500/50 bg-[var(--surface)] text-violet-500" 
+                  className="w-4 h-4 rounded border-info/50 bg-[var(--surface)] text-info"
                 />
-                <span className="text-violet-300 font-medium">First-Time Homebuyer (ONE Mortgage, MassHousing)</span>
+                <span className="text-info font-medium">First-Time Homebuyer (ONE Mortgage, MassHousing)</span>
               </label>
               {inputs.firstTimeHomeBuyer?.enabled && (
                 <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1999,15 +1999,15 @@ function HousePageInner() {
             </div>
             
             {/* HELOC Strategy */}
-            <div className="p-4 bg-emerald-900/10 border border-emerald-500/20 rounded-xl">
+            <div className="p-4 bg-success-muted border border-success/20 rounded-xl">
               <label className="flex items-center gap-3 cursor-pointer">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={inputs.heloc.enabled}
                   onChange={(e) => update('heloc', { ...inputs.heloc, enabled: e.target.checked })}
-                  className="w-4 h-4 rounded border-emerald-500/50 bg-[var(--surface)] text-emerald-500" 
+                  className="w-4 h-4 rounded border-success/50 bg-[var(--surface)] text-success"
                 />
-                <span className="text-emerald-300 font-medium">HELOC → Equities (extract equity, deploy to stocks)</span>
+                <span className="text-success font-medium">HELOC → Equities (extract equity, deploy to stocks)</span>
               </label>
             </div>
             
@@ -2019,14 +2019,14 @@ function HousePageInner() {
                   <input type="checkbox" checked={inputs.taxStrategies?.costSegregation?.enabled || false}
                     onChange={(e) => update('taxStrategies', {
                       ...inputs.taxStrategies,
-                      costSegregation: { 
-                        enabled: e.target.checked, 
-                        shortLifePercent: 0.20, 
-                        year1BonusDepreciation: 1.0 
+                      costSegregation: {
+                        enabled: e.target.checked,
+                        shortLifePercent: 0.20,
+                        year1BonusDepreciation: 1.0
                       }
                     })}
-                    className="w-4 h-4 rounded border-purple-500/50 bg-[var(--surface)] text-purple-500" />
-                  <span className="text-purple-300 font-medium">Cost Segregation Study</span>
+                    className="w-4 h-4 rounded border-primary/50 bg-[var(--surface)] text-primary" />
+                  <span className="text-primary font-medium">Cost Segregation Study</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer" title="20% QBI deduction on net rental income. Requires 250+ hours/year managing property.">
                   <input type="checkbox" checked={inputs.taxStrategies?.qbi?.enabled || false}
@@ -2034,8 +2034,8 @@ function HousePageInner() {
                       ...inputs.taxStrategies,
                       qbi: { enabled: e.target.checked, qualifiesAsBusiness: e.target.checked }
                     })}
-                    className="w-4 h-4 rounded border-amber-500/50 bg-[var(--surface)] text-amber-500" />
-                  <span className="text-amber-300 font-medium">QBI Deduction (199A)</span>
+                    className="w-4 h-4 rounded border-warning/50 bg-[var(--surface)] text-warning" />
+                  <span className="text-warning font-medium">QBI Deduction (199A)</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer" title="Defer capital gains and depreciation recapture by reinvesting into like-kind property.">
                   <input type="checkbox" checked={inputs.taxStrategies?.exchange1031?.enabled || false}
@@ -2043,8 +2043,8 @@ function HousePageInner() {
                       ...inputs.taxStrategies,
                       exchange1031: { enabled: e.target.checked }
                     })}
-                    className="w-4 h-4 rounded border-cyan-500/50 bg-[var(--surface)] text-cyan-500" />
-                  <span className="text-cyan-300 font-medium">1031 Exchange</span>
+                    className="w-4 h-4 rounded border-info/50 bg-[var(--surface)] text-info" />
+                  <span className="text-info font-medium">1031 Exchange</span>
                 </label>
               </div>
             </div>
@@ -2054,19 +2054,19 @@ function HousePageInner() {
               <div className="text-[var(--content-subtle)] text-sm mb-3">Exit Strategy</div>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { value: 'sell', label: 'Sell', color: 'red', desc: 'Pay all taxes' },
-                  { value: 'hold', label: 'Hold Forever', color: 'green', desc: 'Paper equity, no taxes' },
-                  { value: '1031', label: '1031 Exchange', color: 'cyan', desc: 'Defer taxes, upgrade' },
-                  { value: 'remote', label: 'Remote Landlord', color: 'amber', desc: '100% rental, hire PM' },
-                ].map(({ value, label, color, desc }) => (
+                  { value: 'sell', label: 'Sell', activeClass: 'bg-error-muted border-error text-error', desc: 'Pay all taxes' },
+                  { value: 'hold', label: 'Hold Forever', activeClass: 'bg-success-muted border-success text-success', desc: 'Paper equity, no taxes' },
+                  { value: '1031', label: '1031 Exchange', activeClass: 'bg-info-muted border-info text-info', desc: 'Defer taxes, upgrade' },
+                  { value: 'remote', label: 'Remote Landlord', activeClass: 'bg-warning-muted border-warning text-warning', desc: '100% rental, hire PM' },
+                ].map(({ value, label, activeClass, desc }) => (
                   <button
                     key={value}
                     onClick={() => update('exitStrategy', value as 'sell' | 'hold' | '1031' | 'remote')}
-                    className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${
                       inputs.exitStrategy === value
-                        ? `bg-${color}-500/30 border-${color}-500 text-${color}-300`
+                        ? activeClass
                         : 'bg-[var(--surface)] border-[var(--border)] text-[var(--content-subtle)] hover:bg-[var(--surface-muted)]'
-                    } border`}
+                    }`}
                     title={desc}
                   >
                     {label}
@@ -2092,7 +2092,7 @@ function HousePageInner() {
                       jobLoss: e.target.checked ? { probability: 0.05, yearRange: [1, 10] as [number, number], durationMonths: 6 } : undefined
                     })}
                     className="w-3 h-3 rounded" />
-                  <span className="text-yellow-400/80">Job Loss Risk</span>
+                  <span className="text-warning/80">Job Loss Risk</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="checkbox" checked={!!inputs.scenarios.refinance}
@@ -2457,7 +2457,7 @@ function HousePageInner() {
                   }, 50)
                 }}
                 disabled={isRunningSensitivity}
-                className="px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed
+                className="px-3 sm:px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed
                            rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningSensitivity ? (
@@ -2483,7 +2483,7 @@ function HousePageInner() {
                   }, 50)
                 }}
                 disabled={isRunningBreakEven}
-                className="px-3 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed
+                className="px-3 sm:px-4 py-2 bg-success hover:bg-success/90 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed
                            rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningBreakEven ? (
@@ -2509,7 +2509,7 @@ function HousePageInner() {
                   }, 50)
                 }}
                 disabled={isRunningWhatIf}
-                className="px-3 sm:px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed
+                className="px-3 sm:px-4 py-2 bg-warning hover:bg-warning/90 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed
                            rounded-lg text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 touch-target"
               >
                 {isRunningWhatIf ? (

@@ -515,10 +515,10 @@ export function ExportPDF({ inputs, results }: ExportPDFProps) {
     <button
       onClick={generatePDF}
       disabled={isGenerating}
-      className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500
-                 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed
-                 rounded-xl text-white font-medium text-sm shadow-lg shadow-red-900/30
-                 transition-all duration-200 hover:shadow-red-900/50 hover:scale-[1.02] active:scale-[0.98]"
+      className="flex items-center gap-2 px-4 py-2.5 bg-error hover:bg-error/90
+                 disabled:bg-gray-600 disabled:cursor-not-allowed
+                 rounded-xl text-white font-medium text-sm shadow-lg shadow-error/30
+                 transition-all duration-200 hover:shadow-error/50 hover:scale-[1.02] active:scale-[0.98]"
     >
       {isGenerating ? (
         <>

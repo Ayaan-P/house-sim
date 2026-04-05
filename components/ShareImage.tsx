@@ -174,10 +174,10 @@ export function ShareImage({ inputs, results }: ShareImageProps) {
       <button
         onClick={() => generateImage()}
         disabled={isGenerating}
-        className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500
-                   disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed
-                   rounded-xl text-white font-medium text-sm shadow-lg shadow-purple-900/30
-                   transition-all duration-200 hover:shadow-purple-900/50 hover:scale-[1.02] active:scale-[0.98]"
+        className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover
+                   disabled:bg-gray-600 disabled:cursor-not-allowed
+                   rounded-xl text-white font-medium text-sm shadow-lg shadow-primary/30
+                   transition-all duration-200 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98]"
       >
         {isGenerating ? (
           <>
@@ -395,7 +395,7 @@ export function ShareImage({ inputs, results }: ShareImageProps) {
               {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
                 <button
                   onClick={shareNative}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 rounded-xl text-white font-medium text-sm transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover rounded-xl text-white font-medium text-sm transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />

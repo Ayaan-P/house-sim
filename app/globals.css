@@ -24,6 +24,11 @@
   /* Accent */
   --accent: #3b82f6;
   --accent-hover: #2563eb;
+
+  /* Primary (CTA buttons) */
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-muted: rgba(99, 102, 241, 0.12);
   
   /* Chart colors (semantic) */
   --chart-buy: #10b981;
@@ -65,7 +70,12 @@
   
   --accent: #84babf;
   --accent-hover: #9ecfd3;
-  
+
+  /* Primary (CTA buttons) */
+  --primary: #818cf8;
+  --primary-hover: #a5b4fc;
+  --primary-muted: rgba(129, 140, 248, 0.15);
+
   --chart-buy: #10b981;
   --chart-rent: #ef4444;
   --chart-delta: #3b82f6;
@@ -100,7 +110,12 @@
     
     --accent: #84babf;
     --accent-hover: #9ecfd3;
-    
+
+    /* Primary (CTA buttons) */
+    --primary: #818cf8;
+    --primary-hover: #a5b4fc;
+    --primary-muted: rgba(129, 140, 248, 0.15);
+
     --chart-buy: #10b981;
     --chart-rent: #ef4444;
     --chart-delta: #3b82f6;
