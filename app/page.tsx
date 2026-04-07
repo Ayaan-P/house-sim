@@ -23,6 +23,7 @@ import { ExportPDF } from '@/components/ExportPDF'
 import { QuickMetrics } from '@/components/QuickMetrics'
 import { AmortizationChart } from '@/components/AmortizationChart'
 import { WealthTimelineChart } from '@/components/WealthTimelineChart'
+import { LeverageRiskSection } from '@/components/LeverageRiskSection'
 
 // Wrapper component to handle searchParams with Suspense
 function HousePageContent() {
@@ -2741,6 +2742,10 @@ function HousePageInner() {
           {/* Wealth Timeline - Rent vs Buy over time */}
           <Section title="📈 Wealth Over Time">
             <WealthTimelineChart inputs={inputs} simResults={simResults} />
+          </Section>
+
+          <Section title="⚖️ Leverage Risk">
+            <LeverageRiskSection inputs={inputs} simResults={simResults} />
           </Section>
 
           {/* Amortization Schedule Visualization */}
