@@ -13,7 +13,8 @@ import {
   Unit, createMultiFamilyUnits, getUnitSummary,
   runSensitivityAnalysis, SensitivityResult,
   runBreakEvenSurface, BreakEvenSurface,
-  runWhatIfAnalysis, WhatIfResult, WhatIfScenario
+  runWhatIfAnalysis, WhatIfResult, WhatIfScenario,
+  alternativeInvestmentPresets, getAlternativeInvestmentLabel
 } from '@/lib/monte-carlo'
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
 import { ResultsSkeleton, SimulationProgress } from '@/components/Skeleton'
@@ -61,6 +62,8 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
   const [isExpanded, setIsExpanded] = useState(false)
   
   if (!simResults) return null
+
+  const alternativeInvestmentLabel = getAlternativeInvestmentLabel(inputs)
   
   // Calculate all the values we'll show
   const downPayment = inputs.homePrice * (inputs.downPaymentPercent / 100)
@@ -240,7 +243,8 @@ ${hasRental ? `### Rental (Schedule E)
 
 ## Monte Carlo Assumptions
 - Home Appreciation: μ=${pct(inputs.appreciationMean)}, σ=${pct(inputs.appreciationStdDev)}
-- Stock Returns: μ=${pct(inputs.stockReturnMean)}, σ=${pct(inputs.stockReturnStdDev)}
+- Alternative Investment: ${alternativeInvestmentLabel}
+- Return Assumption: μ=${pct(inputs.stockReturnMean)}, σ=${pct(inputs.stockReturnStdDev)}
 - Correlation: ${pct(inputs.marketCorrelation || 0.3)}
 - Simulations: ${inputs.numSimulations.toLocaleString()}
 - Time Horizon: ${inputs.years} years
@@ -505,6 +509,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
     // Alternative (rent)
     params.set('rent', inputs.currentRent.toString())
     addPct('rentgrowth', inputs.rentGrowth, d.rentGrowth)
+    if (inputs.alternativeInvestmentPreset !== d.alternativeInvestmentPreset) params.set('alt', inputs.alternativeInvestmentPreset)
     
     // Distributions
     addPct('appr', inputs.appreciationMean, d.appreciationMean)
@@ -858,8 +863,37 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 <span className="font-mono">{formatCurrency(Math.abs(monthlySavings))}/mo</span>
               </div>
             </div>
+            <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium text-[var(--content)]">Alternative investment</div>
+                  <div className="text-xs text-[var(--content-subtle)]">Choose where the rent-side cash actually goes.</div>
+                </div>
+                <div className="rounded-full border border-[var(--border)] px-2 py-1 text-xs text-[var(--content-subtle)]">
+                  {alternativeInvestmentLabel}
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {(['sp500', 'balanced', 'cash'] as const).map((preset) => {
+                  const option = alternativeInvestmentPresets[preset]
+                  const active = inputs.alternativeInvestmentPreset === preset
+                  return (
+                    <div
+                      key={preset}
+                      className={`rounded-xl border p-3 text-left ${active ? 'border-primary bg-primary/10' : 'border-[var(--border)] bg-[var(--surface-muted)]'}`}
+                    >
+                      <div className="text-sm font-medium text-[var(--content)]">{option.label}</div>
+                      <div className="mt-1 text-xs text-[var(--content-subtle)]">{option.description}</div>
+                      <div className="mt-2 text-xs font-mono text-[var(--content-subtle)]">
+                        μ {(option.mean * 100).toFixed(1)}% • σ {(option.stdDev * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
             <p className="mt-3 text-xs text-[var(--content-subtle)]">
-              💡 If renting is cheaper, you invest the {formatCurrency(totalUpfront)} down payment PLUS {formatCurrency(Math.abs(monthlySavings))}/mo savings into stocks.
+              💡 If renting is cheaper, you invest the {formatCurrency(totalUpfront)} down payment PLUS {formatCurrency(Math.abs(monthlySavings))}/mo savings into {alternativeInvestmentLabel}.
               {netCostBuy < annualRent && ` If buying is cheaper, YOU invest the ${formatCurrency(Math.abs(monthlySavings))}/mo savings.`}
             </p>
           </div>
@@ -885,7 +919,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                   </div>
                 </div>
                 <div className="p-3 bg-[var(--surface)] rounded-lg">
-                  <div className="text-[var(--content-subtle)] text-xs mb-1">Stock Returns</div>
+                  <div className="text-[var(--content-subtle)] text-xs mb-1">{alternativeInvestmentLabel}</div>
                   <div className="font-mono">
                     μ = {(inputs.stockReturnMean * 100).toFixed(1)}%/yr
                     <br />
@@ -938,7 +972,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                     <span className="font-mono">{formatCurrency(finalYear?.wealthRent.p50 || 0)}</span>
                   </div>
                   <div className="text-xs text-[var(--content-subtle)] pl-2">
-                    (down payment + monthly savings, compounded)
+                    ({alternativeInvestmentLabel}, down payment + monthly savings, compounded)
                   </div>
                 </div>
               </div>
@@ -1239,6 +1273,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
 function HousePageInner() {
   const searchParams = useSearchParams()
   const [inputs, setInputs] = useState<SimulationParams>(defaultParams)
+  const alternativeInvestmentLabel = getAlternativeInvestmentLabel(inputs)
   const [simResults, setSimResults] = useState<SimulationSummary | null>(null)
   const [isRunning, setIsRunning] = useState(false)
   
@@ -1303,6 +1338,10 @@ function HousePageInner() {
       // Alternative (rent)
       if (pNum('rent') !== null) updates.currentRent = pNum('rent')!
       if (pPct('rentgrowth') !== null) updates.rentGrowth = pPct('rentgrowth')!
+      const altParam = p('alt')
+      if (altParam && ['sp500', 'balanced', 'cash', 'custom'].includes(altParam)) {
+        updates.alternativeInvestmentPreset = altParam as SimulationParams['alternativeInvestmentPreset']
+      }
       
       // Distributions
       if (pPct('appr') !== null) updates.appreciationMean = pPct('appr')!
@@ -1942,8 +1981,38 @@ function HousePageInner() {
                 <InputField label="State Tax" value={(inputs.stateRate * 100).toFixed(0)} onChange={(v: number) => update('stateRate', v / 100)} suffix="%" tooltip="State income tax rate. MA is 5% flat." min={0} max={15} />
                 <InputField label="Appreciation μ" value={(inputs.appreciationMean * 100).toFixed(1)} onChange={(v: number) => update('appreciationMean', v / 100)} suffix="%" tooltip="Mean annual home appreciation. Historical ~5%." min={-20} max={30} />
                 <InputField label="Appreciation σ" value={(inputs.appreciationStdDev * 100).toFixed(1)} onChange={(v: number) => update('appreciationStdDev', v / 100)} suffix="%" tooltip="Std dev of appreciation. Higher = more volatility." min={0} max={50} />
-                <InputField label="Stock Return μ" value={(inputs.stockReturnMean * 100).toFixed(1)} onChange={(v: number) => update('stockReturnMean', v / 100)} suffix="%" tooltip="Mean annual S&P 500 return. Historical ~10%." min={-50} max={50} />
-                <InputField label="Stock Return σ" value={(inputs.stockReturnStdDev * 100).toFixed(1)} onChange={(v: number) => update('stockReturnStdDev', v / 100)} suffix="%" tooltip="Std dev of stock returns. Historical ~17%." min={0} max={100} />
+                <div className="col-span-2 md:col-span-4 lg:col-span-6 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-[var(--content)]">Alternative investment assumptions</div>
+                      <div className="text-xs text-[var(--content-subtle)]">Preset keeps the main form simple. Switch to custom if you want your own return curve.</div>
+                    </div>
+                    <select
+                      value={inputs.alternativeInvestmentPreset}
+                      onChange={(e) => {
+                        const preset = e.target.value as SimulationParams['alternativeInvestmentPreset']
+                        const nextPreset = alternativeInvestmentPresets[preset]
+                        setInputs(prev => ({
+                          ...prev,
+                          alternativeInvestmentPreset: preset,
+                          stockReturnMean: preset === 'custom' ? prev.stockReturnMean : nextPreset.mean,
+                          stockReturnStdDev: preset === 'custom' ? prev.stockReturnStdDev : nextPreset.stdDev,
+                        }))
+                      }}
+                      className="themed-input min-w-[180px] rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <option value="sp500">S&amp;P 500</option>
+                      <option value="balanced">60/40 Portfolio</option>
+                      <option value="cash">Cash / T-Bills</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+                  <div className="mt-3 text-xs text-[var(--content-subtle)]">
+                    {alternativeInvestmentPresets[inputs.alternativeInvestmentPreset].description}
+                  </div>
+                </div>
+                <InputField label={`${inputs.alternativeInvestmentPreset === 'custom' ? 'Custom Return μ' : 'Alt Return μ'}`} value={(inputs.stockReturnMean * 100).toFixed(1)} onChange={(v: number) => update('stockReturnMean', v / 100)} suffix="%" tooltip="Mean annual return for the rent-side alternative investment." min={-50} max={50} />
+                <InputField label={`${inputs.alternativeInvestmentPreset === 'custom' ? 'Custom Return σ' : 'Alt Return σ'}`} value={(inputs.stockReturnStdDev * 100).toFixed(1)} onChange={(v: number) => update('stockReturnStdDev', v / 100)} suffix="%" tooltip="Annual volatility for the rent-side alternative investment." min={0} max={100} />
                 <InputField label="Rent Growth" value={(inputs.rentGrowth * 100).toFixed(0)} onChange={(v: number) => update('rentGrowth', v / 100)} suffix="%" tooltip="Annual rent increase for your current rent." min={-10} max={20} />
               </div>
             </div>
@@ -2440,7 +2509,7 @@ function HousePageInner() {
               </p>
               <p className="text-[var(--content-subtle)] mt-4">
                 Note: This simulation samples from normal distributions for both housing appreciation (μ={formatPercent(inputs.appreciationMean)}, σ={formatPercent(inputs.appreciationStdDev)}) 
-                and stock returns (μ={formatPercent(inputs.stockReturnMean)}, σ={formatPercent(inputs.stockReturnStdDev)}). 
+                and {alternativeInvestmentLabel} returns (μ={formatPercent(inputs.stockReturnMean)}, σ={formatPercent(inputs.stockReturnStdDev)}). 
                 Real returns have fat tails — extreme outcomes are more likely than this model suggests.
               </p>
             </div>

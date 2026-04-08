@@ -58,6 +58,7 @@ export function createNationalAverageParams(): SimulationParams {
     closingMonth: 6,
     currentRent: na.medianRent,
     rentGrowth: na.medianRentGrowth,
+    alternativeInvestmentPreset: 'sp500',
     appreciationMean: na.historicalAppreciation,
     appreciationStdDev: 0.12,
     stockReturnMean: na.historicalStockReturn,

@@ -126,6 +126,7 @@ export interface SimulationParams {
   // Alternative
   currentRent: number
   rentGrowth: number
+  alternativeInvestmentPreset: 'sp500' | 'balanced' | 'cash' | 'custom'
   
   // Distributions (mean, stdDev)
   appreciationMean: number
@@ -272,6 +273,40 @@ export interface SimulationSummary {
   rentalMetrics: RentalInvestmentMetrics
   // All runs (for detailed analysis)
   runs: SimulationRun[]
+}
+
+export const alternativeInvestmentPresets = {
+  sp500: {
+    label: 'S&P 500',
+    description: 'Higher growth, higher volatility',
+    mean: 0.10,
+    stdDev: 0.17,
+  },
+  balanced: {
+    label: '60/40 Portfolio',
+    description: 'Balanced stocks and bonds',
+    mean: 0.07,
+    stdDev: 0.10,
+  },
+  cash: {
+    label: 'Cash / T-Bills',
+    description: 'Lower return, lower volatility',
+    mean: 0.04,
+    stdDev: 0.02,
+  },
+  custom: {
+    label: 'Custom',
+    description: 'Set your own return and volatility',
+    mean: 0.10,
+    stdDev: 0.17,
+  },
+} as const
+
+export function getAlternativeInvestmentLabel(params: Pick<SimulationParams, 'alternativeInvestmentPreset' | 'stockReturnMean' | 'stockReturnStdDev'>): string {
+  if (params.alternativeInvestmentPreset === 'custom') {
+    return `Custom Portfolio (${Math.round(params.stockReturnMean * 100)}% / ${Math.round(params.stockReturnStdDev * 100)}% σ)`
+  }
+  return alternativeInvestmentPresets[params.alternativeInvestmentPreset].label
 }
 
 // Box-Muller transform for normal distribution
@@ -1069,6 +1104,7 @@ export const defaultParams: SimulationParams = {
   
   currentRent: 1500,              // Ayaan's current rent
   rentGrowth: 0.03,
+  alternativeInvestmentPreset: 'sp500',
   
   // Historical distributions
   appreciationMean: 0.05,      // Cambridge long-term ~5%

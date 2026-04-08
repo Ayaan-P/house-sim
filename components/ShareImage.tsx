@@ -311,7 +311,7 @@ export function ShareImage({ inputs, results }: ShareImageProps) {
                 <div className="text-white/70 font-mono">{(inputs.appreciationMean * 100).toFixed(1)}%</div>
               </div>
               <div>
-                <div className="text-white/40">Stock Return</div>
+                <div className="text-white/40">{inputs.alternativeInvestmentPreset === 'sp500' ? 'S&P 500' : inputs.alternativeInvestmentPreset === 'balanced' ? '60/40' : inputs.alternativeInvestmentPreset === 'cash' ? 'Cash / T-Bills' : 'Alt Return'}</div>
                 <div className="text-white/70 font-mono">{(inputs.stockReturnMean * 100).toFixed(1)}%</div>
               </div>
               <div>

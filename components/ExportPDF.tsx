@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { SimulationParams, SimulationSummary } from '@/lib/monte-carlo'
+import { SimulationParams, SimulationSummary, getAlternativeInvestmentLabel } from '@/lib/monte-carlo'
 
 interface ExportPDFProps {
   inputs: SimulationParams
@@ -72,6 +72,8 @@ export function ExportPDF({ inputs, results }: ExportPDFProps) {
         return false
       }
       
+      const alternativeInvestmentLabel = getAlternativeInvestmentLabel(inputs)
+
       // ===== PAGE 1: HEADER & SUMMARY =====
       
       // Title
@@ -252,7 +254,7 @@ export function ExportPDF({ inputs, results }: ExportPDFProps) {
       
       const assumptions = [
         ['Home Appreciation', `μ=${formatPercent(inputs.appreciationMean)}, σ=${formatPercent(inputs.appreciationStdDev)}`],
-        ['Stock Returns', `μ=${formatPercent(inputs.stockReturnMean)}, σ=${formatPercent(inputs.stockReturnStdDev)}`],
+        [alternativeInvestmentLabel, `μ=${formatPercent(inputs.stockReturnMean)}, σ=${formatPercent(inputs.stockReturnStdDev)}`],
         ['Market Correlation', formatPercent(inputs.marketCorrelation || 0.3)],
         ['Simulations', inputs.numSimulations.toLocaleString()],
       ]
