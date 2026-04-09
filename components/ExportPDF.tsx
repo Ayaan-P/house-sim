@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { SimulationParams, SimulationSummary, getAlternativeInvestmentLabel } from '@/lib/monte-carlo'
+import { SimulationParams, SimulationSummary, getAlternativeInvestmentLabel, getStateTaxProfileLabel } from '@/lib/monte-carlo'
 
 interface ExportPDFProps {
   inputs: SimulationParams
@@ -73,6 +73,7 @@ export function ExportPDF({ inputs, results }: ExportPDFProps) {
       }
       
       const alternativeInvestmentLabel = getAlternativeInvestmentLabel(inputs)
+      const stateProfileLabel = getStateTaxProfileLabel(inputs.stateProfile)
 
       // ===== PAGE 1: HEADER & SUMMARY =====
       
@@ -173,6 +174,7 @@ export function ExportPDF({ inputs, results }: ExportPDFProps) {
         ['Loan Amount', formatCurrency(loanAmount)],
         ['Interest Rate', `${(inputs.mortgageRate * 100).toFixed(2)}%`],
         ['Monthly P&I', formatCurrency(monthlyPI)],
+        ['State Profile', stateProfileLabel],
         ['Property Tax', `${(inputs.propertyTaxRate * 100).toFixed(2)}%`],
         ['Insurance', `${formatCurrency(inputs.insuranceAnnual)}/yr`],
         ['Maintenance', `${formatCurrency(inputs.maintenanceAnnual)}/yr`],
@@ -253,6 +255,7 @@ export function ExportPDF({ inputs, results }: ExportPDFProps) {
       y += 8
       
       const assumptions = [
+        ['State Taxes', `${stateProfileLabel} (${(inputs.stateRate * 100).toFixed(1)}% income, ${(inputs.propertyTaxRate * 100).toFixed(2)}% property)`],
         ['Home Appreciation', `μ=${formatPercent(inputs.appreciationMean)}, σ=${formatPercent(inputs.appreciationStdDev)}`],
         [alternativeInvestmentLabel, `μ=${formatPercent(inputs.stockReturnMean)}, σ=${formatPercent(inputs.stockReturnStdDev)}`],
         ['Market Correlation', formatPercent(inputs.marketCorrelation || 0.3)],

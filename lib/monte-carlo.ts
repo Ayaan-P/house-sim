@@ -11,6 +11,25 @@ export interface Unit {
   ownerOccupied: boolean  // True if owner lives here
 }
 
+export const stateTaxProfiles = {
+  ma: { label: 'Massachusetts', stateRate: 0.05, propertyTaxRate: 0.011, propertyTaxGrowth: 0.02 },
+  ca: { label: 'California', stateRate: 0.093, propertyTaxRate: 0.0075, propertyTaxGrowth: 0.02 },
+  ny: { label: 'New York', stateRate: 0.0685, propertyTaxRate: 0.014, propertyTaxGrowth: 0.02 },
+  nj: { label: 'New Jersey', stateRate: 0.0637, propertyTaxRate: 0.022, propertyTaxGrowth: 0.02 },
+  il: { label: 'Illinois', stateRate: 0.0495, propertyTaxRate: 0.021, propertyTaxGrowth: 0.02 },
+  tx: { label: 'Texas', stateRate: 0, propertyTaxRate: 0.018, propertyTaxGrowth: 0.03 },
+  fl: { label: 'Florida', stateRate: 0, propertyTaxRate: 0.009, propertyTaxGrowth: 0.02 },
+  wa: { label: 'Washington', stateRate: 0, propertyTaxRate: 0.009, propertyTaxGrowth: 0.02 },
+  nh: { label: 'New Hampshire', stateRate: 0, propertyTaxRate: 0.018, propertyTaxGrowth: 0.02 },
+  custom: { label: 'Custom', stateRate: 0.05, propertyTaxRate: 0.011, propertyTaxGrowth: 0.02 },
+} as const
+
+export type StateTaxProfileKey = keyof typeof stateTaxProfiles
+
+export function getStateTaxProfileLabel(profile: StateTaxProfileKey): string {
+  return stateTaxProfiles[profile].label
+}
+
 // Helper to create unit templates for common property types
 export function createMultiFamilyUnits(type: '2-family' | '3-family' | '4-family', config?: {
   bedBathPerUnit?: Array<{ beds: number; baths: number; sqft?: number }>
@@ -114,6 +133,7 @@ export interface SimulationParams {
   vacancyRate: number             // % of year unit is vacant (0-1)
   
   // Tax
+  stateProfile: StateTaxProfileKey
   w2Income: number
   federalBracket: number
   stateRate: number
@@ -1095,6 +1115,7 @@ export const defaultParams: SimulationParams = {
   rentalIncomeGrowth: 0.03,       // Match rent growth
   vacancyRate: 0.05,              // 5% vacancy (~18 days/year turnover)
   
+  stateProfile: 'ma',             // Massachusetts default
   w2Income: 108722,               // Ayaan's W2
   federalBracket: 0.24,           // 24% bracket at $108k (corrected)
   stateRate: 0.05,                // MA flat rate

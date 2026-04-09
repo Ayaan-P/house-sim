@@ -14,7 +14,8 @@ import {
   runSensitivityAnalysis, SensitivityResult,
   runBreakEvenSurface, BreakEvenSurface,
   runWhatIfAnalysis, WhatIfResult, WhatIfScenario,
-  alternativeInvestmentPresets, getAlternativeInvestmentLabel
+  alternativeInvestmentPresets, getAlternativeInvestmentLabel,
+  stateTaxProfiles, StateTaxProfileKey, getStateTaxProfileLabel
 } from '@/lib/monte-carlo'
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
 import { ResultsSkeleton, SimulationProgress } from '@/components/Skeleton'
@@ -64,6 +65,7 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
   if (!simResults) return null
 
   const alternativeInvestmentLabel = getAlternativeInvestmentLabel(inputs)
+  const stateProfileLabel = getStateTaxProfileLabel(inputs.stateProfile)
   
   // Calculate all the values we'll show
   const downPayment = inputs.homePrice * (inputs.downPaymentPercent / 100)
@@ -178,6 +180,7 @@ Generated: ${new Date().toLocaleDateString()}
 
 ## Property Details
 - Home Price: ${f(inputs.homePrice)}
+- State Tax Profile: ${stateProfileLabel}
 - Down Payment: ${inputs.downPaymentPercent}% (${f(downPayment)})
 - Loan Amount: ${f(loanAmount)}
 - Mortgage Rate: ${pct(inputs.mortgageRate)}
@@ -333,6 +336,7 @@ Annual P&I,$${annualPI.toFixed(0)},=MonthlyPI*12
 Year 1 Interest,$${year1Interest.toFixed(0)},Actual amortization calc (not approximation)
 
 COSTS,,
+State Tax Profile,${stateProfileLabel},
 Property Tax Rate,${(inputs.propertyTaxRate * 100).toFixed(2)}%,
 Annual Property Tax,$${annualPropertyTax.toFixed(0)},=HomePrice*TaxRate
 Insurance,$${inputs.insuranceAnnual.toLocaleString()},
@@ -485,6 +489,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
     params.set('price', inputs.homePrice.toString())
     params.set('down', inputs.downPaymentPercent.toString())
     addPct('rate', inputs.mortgageRate, d.mortgageRate)
+    add('state', inputs.stateProfile, d.stateProfile)
     addPct('tax', inputs.propertyTaxRate, d.propertyTaxRate)
     add('insurance', inputs.insuranceAnnual, d.insuranceAnnual)
     
@@ -745,6 +750,10 @@ Primary Residence Exemption,$250k/$500k,Section 121
           <div className="p-4 bg-warning-muted border border-warning/30 rounded-xl">
             <h4 className="text-warning font-bold mb-3">Step 4: Tax Deductions Explained</h4>
             <div className="space-y-2 text-[var(--content-muted)]">
+              <div className="flex justify-between">
+                <span>State profile</span>
+                <span className="font-mono">{stateProfileLabel}</span>
+              </div>
               {hasRental && (
                 <div className="text-[var(--content-subtle)] text-xs mb-2">
                   Owner portion: {(ownerPortion * 100).toFixed(0)}% | Rental portion: {(rentalPortion * 100).toFixed(0)}%
@@ -832,7 +841,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
               </div>
             </div>
             <p className="mt-3 text-xs text-[var(--content-subtle)]">
-              💡 Passive losses above income can offset up to $25k of W2 income if AGI &lt; $100k (phases out $100-150k).
+              💡 Using the {stateProfileLabel} profile for default state income and property-tax assumptions. Manual edits switch the profile to Custom and keep the math live.
             </p>
           </div>
           
@@ -1274,6 +1283,7 @@ function HousePageInner() {
   const searchParams = useSearchParams()
   const [inputs, setInputs] = useState<SimulationParams>(defaultParams)
   const alternativeInvestmentLabel = getAlternativeInvestmentLabel(inputs)
+  const stateProfileLabel = getStateTaxProfileLabel(inputs.stateProfile)
   const [simResults, setSimResults] = useState<SimulationSummary | null>(null)
   const [isRunning, setIsRunning] = useState(false)
   
@@ -1289,6 +1299,21 @@ function HousePageInner() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showStrategies, setShowStrategies] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
+
+  const applyStateProfile = useCallback((profileKey: StateTaxProfileKey) => {
+    const profile = stateTaxProfiles[profileKey]
+    setInputs(prev => ({
+      ...prev,
+      stateProfile: profileKey,
+      stateRate: profile.stateRate,
+      propertyTaxRate: profile.propertyTaxRate,
+      propertyTaxGrowth: profile.propertyTaxGrowth,
+    }))
+  }, [])
+
+  const updateTaxField = useCallback((key: 'stateRate' | 'propertyTaxRate', value: number) => {
+    setInputs(prev => ({ ...prev, [key]: value, stateProfile: 'custom' }))
+  }, [])
   
   // Parse URL params - comprehensive list of all SimulationParams fields
   useEffect(() => {
@@ -1297,6 +1322,7 @@ function HousePageInner() {
     const pInt = (key: string) => p(key) ? parseInt(p(key)!, 10) : null
     const pBool = (key: string) => p(key) === '1' || p(key) === 'true'
     const pPct = (key: string) => pNum(key) !== null ? pNum(key)! / 100 : null  // Convert percentage to decimal
+    const stateParam = p('state') as StateTaxProfileKey | null
     
     // Auto-open collapsed sections BEFORE early return (even if no params change inputs)
     const hasAdvancedParams = p('hoa') || p('maint') || p('income') || p('fedbracket') || p('appr') || p('stock')
@@ -1311,10 +1337,20 @@ function HousePageInner() {
       const updates: Partial<SimulationParams> = {}
       
       // House
+      if (stateParam && stateParam in stateTaxProfiles) {
+        const profile = stateTaxProfiles[stateParam]
+        updates.stateProfile = stateParam
+        updates.propertyTaxRate = profile.propertyTaxRate
+        updates.stateRate = profile.stateRate
+        updates.propertyTaxGrowth = profile.propertyTaxGrowth
+      }
       if (pNum('price') !== null) updates.homePrice = pNum('price')!
       if (pNum('down') !== null) updates.downPaymentPercent = pNum('down')!
       if (pPct('rate') !== null) updates.mortgageRate = pPct('rate')!
-      if (pPct('tax') !== null) updates.propertyTaxRate = pPct('tax')!
+      if (pPct('tax') !== null) {
+        updates.propertyTaxRate = pPct('tax')!
+        updates.stateProfile = 'custom'
+      }
       if (pNum('insurance') !== null) updates.insuranceAnnual = pNum('insurance')!
       
       // Additional costs
@@ -1331,7 +1367,10 @@ function HousePageInner() {
       // Tax
       if (pNum('income') !== null) updates.w2Income = pNum('income')!
       if (pPct('fedbracket') !== null) updates.federalBracket = pPct('fedbracket')!
-      if (pPct('staterate') !== null) updates.stateRate = pPct('staterate')!
+      if (pPct('staterate') !== null) {
+        updates.stateRate = pPct('staterate')!
+        updates.stateProfile = 'custom'
+      }
       if (p('filing') === 'married') updates.filingStatus = 'married'
       if (pPct('buildingpct') !== null) updates.buildingValuePercent = pPct('buildingpct')!
       
@@ -1474,6 +1513,7 @@ function HousePageInner() {
     params.set('price', inputs.homePrice.toString())
     params.set('down', inputs.downPaymentPercent.toString())
     addPct('rate', inputs.mortgageRate, d.mortgageRate)
+    add('state', inputs.stateProfile, d.stateProfile)
     addPct('tax', inputs.propertyTaxRate, d.propertyTaxRate)
     add('insurance', inputs.insuranceAnnual, d.insuranceAnnual)
     add('closing', inputs.closingCostPercent, d.closingCostPercent)
@@ -1976,9 +2016,27 @@ function HousePageInner() {
                 <InputField label="HOA/mo" value={inputs.hoaMonthly} onChange={(v: number) => update('hoaMonthly', v)} prefix="$" tooltip="Monthly HOA dues. Multi-family usually $0." min={0} max={5000} />
                 <InputField label="Maintenance/yr" value={inputs.maintenanceAnnual} onChange={(v: number) => update('maintenanceAnnual', v)} prefix="$" tooltip="Annual repairs/upkeep. ~1% of home value." min={0} max={100000} />
                 <InputField label="Closing %" value={inputs.closingCostPercent} onChange={(v: number) => update('closingCostPercent', v)} suffix="%" tooltip="Closing costs as % of price. Usually 2-4%." min={0} max={10} />
+                <div className="mb-4 col-span-2 md:col-span-2 lg:col-span-3">
+                  <label className="block text-sm font-medium text-[var(--content-muted)] mb-1.5">State tax profile</label>
+                  <select
+                    value={inputs.stateProfile}
+                    onChange={(e) => applyStateProfile(e.target.value as StateTaxProfileKey)}
+                    className="themed-input w-full border rounded-lg px-4 py-2.5 text-base focus:ring-1 focus:outline-none transition-colors focus:border-[var(--accent)] focus:ring-[var(--accent)]"
+                  >
+                    {(Object.entries(stateTaxProfiles) as [StateTaxProfileKey, typeof stateTaxProfiles[StateTaxProfileKey]][]).map(([key, profile]) => (
+                      <option key={key} value={key}>
+                        {profile.label} • income {(profile.stateRate * 100).toFixed(1)}% • property {(profile.propertyTaxRate * 100).toFixed(2)}%
+                      </option>
+                    ))}
+                  </select>
+                  <div className="mt-1 text-xs text-[var(--content-subtle)]">
+                    Prefills state income + property tax assumptions. Editing either field below switches to Custom.
+                  </div>
+                </div>
                 <InputField label="W2 Income" value={inputs.w2Income} onChange={(v: number) => update('w2Income', v)} prefix="$" tooltip="Your annual W2 income. Affects tax brackets and passive loss limits." min={0} max={10000000} />
                 <InputField label="Fed Tax" value={(inputs.federalBracket * 100).toFixed(0)} onChange={(v: number) => update('federalBracket', v / 100)} suffix="%" tooltip="Your marginal federal tax bracket." min={0} max={50} />
-                <InputField label="State Tax" value={(inputs.stateRate * 100).toFixed(0)} onChange={(v: number) => update('stateRate', v / 100)} suffix="%" tooltip="State income tax rate. MA is 5% flat." min={0} max={15} />
+                <InputField label="State Tax" value={(inputs.stateRate * 100).toFixed(1)} onChange={(v: number) => updateTaxField('stateRate', v / 100)} suffix="%" tooltip="State income tax rate. MA is 5% flat. Manual edits switch the profile to Custom." min={0} max={15} />
+                <InputField label="Property Tax" value={(inputs.propertyTaxRate * 100).toFixed(2)} onChange={(v: number) => updateTaxField('propertyTaxRate', v / 100)} suffix="%" tooltip="Annual property tax as % of home value. Manual edits switch the profile to Custom." min={0} max={5} />
                 <InputField label="Appreciation μ" value={(inputs.appreciationMean * 100).toFixed(1)} onChange={(v: number) => update('appreciationMean', v / 100)} suffix="%" tooltip="Mean annual home appreciation. Historical ~5%." min={-20} max={30} />
                 <InputField label="Appreciation σ" value={(inputs.appreciationStdDev * 100).toFixed(1)} onChange={(v: number) => update('appreciationStdDev', v / 100)} suffix="%" tooltip="Std dev of appreciation. Higher = more volatility." min={0} max={50} />
                 <div className="col-span-2 md:col-span-4 lg:col-span-6 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
@@ -2224,6 +2282,10 @@ function HousePageInner() {
 
           {/* Summary Stats */}
           <Section title="Simulation Results">
+            <div className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--content-muted)]">
+              <span className="font-medium text-[var(--content)]">Tax profile:</span> {stateProfileLabel}
+              <span className="text-[var(--content-subtle)]"> • income tax {(inputs.stateRate * 100).toFixed(1)}% • property tax {(inputs.propertyTaxRate * 100).toFixed(2)}%</span>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
               <Stat 
                 label="Buy Wins Probability" 

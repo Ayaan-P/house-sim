@@ -50,6 +50,7 @@ export function createNationalAverageParams(): SimulationParams {
     rentalIncome: 0,
     rentalIncomeGrowth: 0.03,
     vacancyRate: 0.05,
+    stateProfile: 'custom',
     w2Income: na.medianHouseholdIncome,
     federalBracket: na.medianFederalBracket,
     stateRate: na.averageStateRate,
