@@ -145,7 +145,12 @@ export interface SimulationParams {
   
   // Alternative
   currentRent: number
-  rentGrowth: number
+  rentGrowth: number              // Legacy: fixed rent growth rate (used when rentStochasticGrowth = false)
+  rentGrowthMean: number          // Stochastic: mean annual rent growth
+  rentGrowthStdDev: number        // Stochastic: std dev of annual rent growth
+  rentHomeCorrelation: number    // Correlation between rent growth & home appreciation (0-1, real-world ~0.6-0.8)
+  rentFloor: number              // Stochastic: rent doesn't drop below this % of previous year (sticky downward, e.g. 0.97 = max 3% drop)
+  rentStochasticGrowth: boolean  // Enable stochastic rent growth (vs fixed %)
   alternativeInvestmentPreset: 'sp500' | 'balanced' | 'cash' | 'custom'
   
   // Distributions (mean, stdDev)
@@ -533,6 +538,13 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     stockReturnMean, stockReturnStdDev, years, scenarios, heloc,
   } = params
   
+  // Stochastic rent growth parameters
+  const useStochasticRent = params.rentStochasticGrowth ?? false
+  const rentGrowthMean = params.rentGrowthMean ?? rentGrowth  // Default to fixed rate if not set
+  const rentGrowthStdDev = params.rentGrowthStdDev ?? 0.02  // Default 2% std dev
+  const rentHomeCorrelation = params.rentHomeCorrelation ?? 0.65  // Default ~0.65 correlation
+  const rentFloor = params.rentFloor ?? 0.97  // Default: rent doesn't drop more than 3% in a year (sticky downward)
+  
   // Multi-family vs single-family mode
   const units = params.units || []
   const isMultiFamily = units.length > 0
@@ -633,7 +645,11 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
         delta: 0,
         events: ['Sold'],
       })
-      currentRentAmount *= (1 + rentGrowth)
+      // Stochastic rent growth in sold path too
+      const soldRentGrowthRate = useStochasticRent
+        ? Math.max(rentFloor - 1, rentGrowthMean + rentGrowthStdDev * 0) // Approximate: use mean in sold path
+        : rentGrowth
+      currentRentAmount *= (1 + (useStochasticRent ? rentGrowthMean : rentGrowth))
       cumulativeCostRent += currentRentAmount * 12
       continue
     }
@@ -964,9 +980,26 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     const wealthBuy = equity + stocksFromHeloc + buyerStockPortfolio
     
     // --- RENT SCENARIO ---
-    // Rent increases annually
+    // Stochastic rent growth, correlated with home appreciation
+    let yearRentGrowth: number
+    if (useStochasticRent) {
+      // Correlate rent growth with home appreciation using Cholesky decomposition
+      // appreciation is already sampled; derive rent growth from it
+      // rentGrowth = rentGrowthMean + rentGrowthStdDev * (rentHomeCorrelation * z_appreciation + sqrt(1 - rentHomeCorrelation^2) * z_independent)
+      // where z_appreciation = (appreciation - appreciationMean) / appreciationStdDev
+      const zAppreciation = appreciationStdDev > 0
+        ? (appreciation - appreciationMean) / appreciationStdDev
+        : 0
+      const zIndependent = randomNormal(0, 1)  // Independent shock for rent
+      const zRent = rentHomeCorrelation * zAppreciation + Math.sqrt(Math.max(0, 1 - rentHomeCorrelation * rentHomeCorrelation)) * zIndependent
+      yearRentGrowth = rentGrowthMean + rentGrowthStdDev * zRent
+      // Sticky-downward: rent doesn't drop below floor (e.g., max 3% annual drop)
+      yearRentGrowth = Math.max(yearRentGrowth, rentFloor - 1)  // rentFloor is like 0.97, so floor is -3%
+    } else {
+      yearRentGrowth = rentGrowth  // Fixed percentage
+    }
     const yearRent = currentRentAmount * 12
-    currentRentAmount *= (1 + rentGrowth)
+    currentRentAmount *= (1 + yearRentGrowth)
     cumulativeCostRent += yearRent
     
     // Stock portfolios grow, plus we invest the difference
@@ -996,8 +1029,9 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
       buyerStockPortfolio = buyerStockPortfolio * (1 + stockReturn) + buyerMonthlySavings * annuityFactor
     }
     
-    // Note: Rent inflation is already modeled via rentGrowth - currentRentAmount grows each year
-    // This means yearRent increases, eating into renter's ability to save
+    // Note: Rent growth is modeled stochastically (correlated with home appreciation)
+    // or as a fixed percentage, depending on rentStochasticGrowth setting.
+    // This means yearRent varies per path, affecting renter's ability to save.
     
     const wealthRent = stockPortfolio
     const delta = wealthBuy - wealthRent
@@ -1124,7 +1158,12 @@ export const defaultParams: SimulationParams = {
   closingMonth: 8,                // August closing (default for Ayaan)
   
   currentRent: 1500,              // Ayaan's current rent
-  rentGrowth: 0.03,
+  rentGrowth: 0.03,              // Legacy: fixed 3% rent growth (used when rentStochasticGrowth = false)
+  rentGrowthMean: 0.03,         // Stochastic: mean annual rent growth (3% historically)
+  rentGrowthStdDev: 0.02,       // Stochastic: std dev of annual rent growth (2% = moderate volatility)
+  rentHomeCorrelation: 0.65,    // Correlation between rent growth & home appreciation
+  rentFloor: 0.97,              // Stochastic: rent doesn't drop more than 3% in a year (sticky downward)
+  rentStochasticGrowth: false,   // Disabled by default (toggle in Advanced Settings)
   alternativeInvestmentPreset: 'sp500',
   
   // Historical distributions

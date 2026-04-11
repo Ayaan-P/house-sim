@@ -241,7 +241,7 @@ ${hasRental ? `### Rental (Schedule E)
 
 ## Rent Alternative
 - Current Rent: ${f(inputs.currentRent)}/mo (${f(annualRent)}/yr)
-- Rent Growth: ${pct(inputs.rentGrowth)}/yr
+- Rent Growth: ${inputs.rentStochasticGrowth ? `Stochastic (μ=${pct(inputs.rentGrowthMean)}, σ=${pct(inputs.rentGrowthStdDev)}, ρ=${pct(inputs.rentHomeCorrelation)} with home, floor=${Math.round((1 - inputs.rentFloor) * 100)}% max drop)` : `${pct(inputs.rentGrowth)}/yr`}
 - Buy vs Rent Difference: ${f(Math.abs(netCostBuy - annualRent))}/yr (${netCostBuy > annualRent ? 'buying costs more' : 'buying costs less'})
 
 ## Monte Carlo Assumptions
@@ -514,6 +514,11 @@ Primary Residence Exemption,$250k/$500k,Section 121
     // Alternative (rent)
     params.set('rent', inputs.currentRent.toString())
     addPct('rentgrowth', inputs.rentGrowth, d.rentGrowth)
+    if (inputs.rentStochasticGrowth) params.set('rentstoch', '1')
+    addPct('rentmu', inputs.rentGrowthMean, d.rentGrowthMean)
+    addPct('rentstd', inputs.rentGrowthStdDev, d.rentGrowthStdDev)
+    addPct('rentcorr', inputs.rentHomeCorrelation, d.rentHomeCorrelation)
+    addPct('rentfloor', inputs.rentFloor, d.rentFloor)
     if (inputs.alternativeInvestmentPreset !== d.alternativeInvestmentPreset) params.set('alt', inputs.alternativeInvestmentPreset)
     
     // Distributions
@@ -858,8 +863,10 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 <span className="font-mono">{formatCurrency(annualRent)}/yr</span>
               </div>
               <div className="flex justify-between">
-                <span>Rent Growth Rate</span>
-                <span className="font-mono">{(inputs.rentGrowth * 100).toFixed(1)}%/yr</span>
+                <span>Rent Growth</span>
+                <span className="font-mono">{inputs.rentStochasticGrowth
+                  ? `${(inputs.rentGrowthMean * 100).toFixed(1)}% μ ± ${(inputs.rentGrowthStdDev * 100).toFixed(1)}% σ`
+                  : `${(inputs.rentGrowth * 100).toFixed(1)}%/yr`}</span>
               </div>
               <div className="flex justify-between border-t border-[var(--border)] pt-2">
                 <span>Buy costs {netCostBuy > annualRent ? 'more' : 'less'} by</span>
@@ -1377,6 +1384,11 @@ function HousePageInner() {
       // Alternative (rent)
       if (pNum('rent') !== null) updates.currentRent = pNum('rent')!
       if (pPct('rentgrowth') !== null) updates.rentGrowth = pPct('rentgrowth')!
+      if (p('rentstoch') === '1') updates.rentStochasticGrowth = true
+      if (pPct('rentmu') !== null) updates.rentGrowthMean = pPct('rentmu')!
+      if (pPct('rentstd') !== null) updates.rentGrowthStdDev = pPct('rentstd')!
+      if (pPct('rentcorr') !== null) updates.rentHomeCorrelation = pPct('rentcorr')!
+      if (pPct('rentfloor') !== null) updates.rentFloor = pPct('rentfloor')!
       const altParam = p('alt')
       if (altParam && ['sp500', 'balanced', 'cash', 'custom'].includes(altParam)) {
         updates.alternativeInvestmentPreset = altParam as SimulationParams['alternativeInvestmentPreset']
@@ -1526,6 +1538,11 @@ function HousePageInner() {
     addPct('staterate', inputs.stateRate, d.stateRate)
     params.set('rent', inputs.currentRent.toString())
     addPct('rentgrowth', inputs.rentGrowth, d.rentGrowth)
+    if (inputs.rentStochasticGrowth) params.set('rentstoch', '1')
+    addPct('rentmu', inputs.rentGrowthMean, d.rentGrowthMean)
+    addPct('rentstd', inputs.rentGrowthStdDev, d.rentGrowthStdDev)
+    addPct('rentcorr', inputs.rentHomeCorrelation, d.rentHomeCorrelation)
+    addPct('rentfloor', inputs.rentFloor, d.rentFloor)
     addPct('appr', inputs.appreciationMean, d.appreciationMean)
     addPct('stock', inputs.stockReturnMean, d.stockReturnMean)
     params.set('years', inputs.years.toString())
@@ -2071,7 +2088,36 @@ function HousePageInner() {
                 </div>
                 <InputField label={`${inputs.alternativeInvestmentPreset === 'custom' ? 'Custom Return μ' : 'Alt Return μ'}`} value={(inputs.stockReturnMean * 100).toFixed(1)} onChange={(v: number) => update('stockReturnMean', v / 100)} suffix="%" tooltip="Mean annual return for the rent-side alternative investment." min={-50} max={50} />
                 <InputField label={`${inputs.alternativeInvestmentPreset === 'custom' ? 'Custom Return σ' : 'Alt Return σ'}`} value={(inputs.stockReturnStdDev * 100).toFixed(1)} onChange={(v: number) => update('stockReturnStdDev', v / 100)} suffix="%" tooltip="Annual volatility for the rent-side alternative investment." min={0} max={100} />
-                <InputField label="Rent Growth" value={(inputs.rentGrowth * 100).toFixed(0)} onChange={(v: number) => update('rentGrowth', v / 100)} suffix="%" tooltip="Annual rent increase for your current rent." min={-10} max={20} />
+                {/* Rent Growth - Fixed or Stochastic */}
+                <div className="col-span-2 md:col-span-4 lg:col-span-6 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-[var(--content)]">Rent Growth Model</div>
+                      <div className="text-xs text-[var(--content-subtle)]">{inputs.rentStochasticGrowth ? 'Stochastic model: rent growth varies per simulation path, correlated with home appreciation. Sticky downward (rent doesn\'t drop as fast as prices).' : 'Fixed rate: rent grows at a steady percentage each year.'}</div>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={inputs.rentStochasticGrowth || false}
+                        onChange={(e) => update('rentStochasticGrowth', e.target.checked)}
+                        className="w-4 h-4 rounded border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                      />
+                      <span className="text-sm text-[var(--content-muted)]">Stochastic</span>
+                    </label>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {!inputs.rentStochasticGrowth ? (
+                      <InputField label="Rent Growth" value={(inputs.rentGrowth * 100).toFixed(0)} onChange={(v: number) => update('rentGrowth', v / 100)} suffix="%" tooltip="Annual rent increase for your current rent." min={-10} max={20} />
+                    ) : (
+                      <>
+                        <InputField label="Rent Growth μ" value={(inputs.rentGrowthMean * 100).toFixed(1)} onChange={(v: number) => update('rentGrowthMean', v / 100)} suffix="%" tooltip="Mean annual rent growth rate. Historical US average ~3%." min={-10} max={20} />
+                        <InputField label="Rent Growth σ" value={(inputs.rentGrowthStdDev * 100).toFixed(1)} onChange={(v: number) => update('rentGrowthStdDev', v / 100)} suffix="%" tooltip="Volatility of annual rent growth. Higher = more uncertainty." min={0} max={20} />
+                        <InputField label="Rent-Home ρ" value={(inputs.rentHomeCorrelation * 100).toFixed(0)} onChange={(v: number) => update('rentHomeCorrelation', v / 100)} suffix="%" tooltip="Correlation between rent growth and home appreciation. 0.6-0.8 is realistic — rents and prices move together but not perfectly." min={0} max={100} />
+                        <InputField label="Rent Floor" value={((1 - inputs.rentFloor) * 100).toFixed(0)} onChange={(v: number) => update('rentFloor', 1 - v / 100)} suffix="% max drop" tooltip="Maximum annual rent decrease. Rents are sticky downward — landlords rarely cut rents as fast as prices fall." min={0} max={20} />
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}

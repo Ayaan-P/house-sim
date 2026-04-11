@@ -230,8 +230,17 @@ export function ExportPDF({ inputs, results }: ExportPDFProps) {
       const rentDetails = [
         ['Current Rent', `${formatCurrency(inputs.currentRent)}/mo`],
         ['Annual Rent', formatCurrency(inputs.currentRent * 12)],
-        ['Rent Growth', formatPercent(inputs.rentGrowth)],
+        ['Rent Growth', inputs.rentStochasticGrowth
+          ? `Stochastic (μ=${formatPercent(inputs.rentGrowthMean)}, σ=${formatPercent(inputs.rentGrowthStdDev)})`
+          : formatPercent(inputs.rentGrowth)],
       ]
+      
+      if (inputs.rentStochasticGrowth) {
+        rentDetails.push(
+          ['Rent-Home Correlation', formatPercent(inputs.rentHomeCorrelation)],
+          ['Rent Floor', `Max ${(Math.round((1 - inputs.rentFloor) * 100))}% annual drop`],
+        )
+      }
       
       doc.setFontSize(9)
       rentDetails.forEach((detail, i) => {
