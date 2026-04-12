@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { SimulationParams, SimulationSummary, runSimulation } from '@/lib/monte-carlo'
+import { SimulationParams, SimulationSummary, runSimulation, defaultMaintenanceComponents } from '@/lib/monte-carlo'
 
 // National average benchmarks (2026 data)
 // Sources: NAR, Census Bureau, Freddie Mac, Federal Reserve
@@ -101,6 +101,10 @@ export function createNationalAverageParams(): SimulationParams {
     remoteLandlord: {
       propertyManagerPercent: 0.10,
       moveOutYear: 5,
+    },
+    maintenanceShock: {
+      enabled: false,
+      components: defaultMaintenanceComponents,
     },
   }
 }

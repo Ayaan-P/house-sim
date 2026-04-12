@@ -437,6 +437,56 @@ export function ExportPDF({ inputs, results }: ExportPDFProps) {
         y += strategies.length * 5 + 8
       }
       
+      // ===== MAINTENANCE SHOCK MODEL =====
+      if (inputs.maintenanceShock?.enabled && results.shockSummary) {
+        checkPageBreak(60)
+        drawLine(y)
+        y += 8
+        
+        doc.setFontSize(14)
+        doc.setFont('helvetica', 'bold')
+        setColor(colors.primary)
+        doc.text('Maintenance Shock Analysis', margin, y)
+        y += 10
+        
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+        setColor(colors.muted)
+        doc.text(`Major repair probability (Yr 1-3): ${(results.shockSummary.probRepairYears1to3 * 100).toFixed(0)}%`, margin, y)
+        y += 5
+        doc.text(`Any major repair (${inputs.years}yr): ${(results.shockSummary.probAnyRepair * 100).toFixed(0)}%`, margin, y)
+        y += 5
+        doc.text(`Average total shock cost: $${Math.round(results.shockSummary.avgTotalShockCost).toLocaleString()}`, margin, y)
+        y += 5
+        doc.text(`Recommended emergency fund (P90): $${Math.round(results.shockSummary.emergencyFundRec).toLocaleString()}`, margin, y)
+        y += 8
+        
+        doc.setFont('helvetica', 'bold')
+        doc.text('Component Failure Rates:', margin, y)
+        y += 5
+        doc.setFont('helvetica', 'normal')
+        results.shockSummary.componentFailureRates.forEach((comp) => {
+          const rateStr = `${comp.name}: ${(comp.failureRate * 100).toFixed(0)}% (avg Yr ${comp.avgReplacementYear.toFixed(1)})`
+          setColor(comp.failureRate > 0.8 ? colors.red : comp.failureRate > 0.4 ? [245, 158, 11] as [number, number, number] : colors.green)
+          doc.text(rateStr, margin + 4, y)
+          y += 5
+        })
+        
+        if (results.shockSummary.cashCrunchYears.length > 0) {
+          y += 3
+          setColor(colors.red)
+          doc.setFont('helvetica', 'bold')
+          doc.text(`⚠ Cash crunch risk in years: ${results.shockSummary.cashCrunchYears.join(', ')}`, margin, y)
+          y += 5
+        }
+        
+        y += 5
+        doc.setFontSize(8)
+        setColor(colors.muted)
+        doc.text(`Base maintenance: $${Math.round((inputs.maintenanceAnnual || 0) * 0.3).toLocaleString()}/yr (30% of smooth budget). Remaining 70% modeled as component failures.`, margin, y)
+        y += 5
+      }
+      
       // ===== DISTRIBUTION STATS =====
       checkPageBreak(50)
       drawLine(y)

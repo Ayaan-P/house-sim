@@ -1,5 +1,92 @@
 // Monte Carlo simulation engine for house vs rent analysis
 
+// ============================================
+// MAINTENANCE SHOCK MODEL
+// ============================================
+
+export interface MaintenanceComponent {
+  name: string
+  replacementCost: number
+  lifespanYears: number
+  ageAtPurchase: number   // Age of component when bought the house (0 = brand new)
+  failureProbability: (age: number) => number  // Returns 0-1 probability of failure this year
+}
+
+// Bathtub curve: high early failure (infant mortality), low middle, high end-of-life
+function bathtubCurve(age: number, lifespanYears: number): number {
+  if (age <= 0) return 0.005  // Tiny infant mortality risk
+  const normalizedAge = age / lifespanYears
+  if (normalizedAge < 0.1) {
+    // Infant mortality: declining from ~3% to baseline
+    return 0.03 * (1 - normalizedAge / 0.1) + 0.005
+  } else if (normalizedAge < 0.7) {
+    // Useful life: low constant failure rate ~1%
+    return 0.01
+  } else {
+    // Wear-out phase: exponentially increasing from 1% to ~40% at end of life
+    const wearOutProgress = (normalizedAge - 0.7) / 0.3
+    return 0.01 + 0.39 * Math.pow(wearOutProgress, 2)
+  }
+}
+
+// Linear failure: simple increasing probability with age
+function linearFailure(age: number, lifespanYears: number): number {
+  if (age <= 0) return 0.005
+  const normalizedAge = age / lifespanYears
+  // Linear increase from ~1% to ~50% at end of life
+  return 0.01 + 0.49 * normalizedAge
+}
+
+// Default components with realistic costs and lifespans
+export const defaultMaintenanceComponents: MaintenanceComponent[] = [
+  {
+    name: 'Roof',
+    replacementCost: 15000,
+    lifespanYears: 25,
+    ageAtPurchase: 0,
+    failureProbability: (age: number) => bathtubCurve(age, 25),
+  },
+  {
+    name: 'HVAC',
+    replacementCost: 8000,
+    lifespanYears: 15,
+    ageAtPurchase: 0,
+    failureProbability: (age: number) => bathtubCurve(age, 15),
+  },
+  {
+    name: 'Water Heater',
+    replacementCost: 2000,
+    lifespanYears: 12,
+    ageAtPurchase: 0,
+    failureProbability: (age: number) => linearFailure(age, 12),
+  },
+  {
+    name: 'Appliances',
+    replacementCost: 5000,
+    lifespanYears: 10,
+    ageAtPurchase: 0,
+    failureProbability: (age: number) => linearFailure(age, 10),
+  },
+]
+
+export interface MaintenanceShockConfig {
+  enabled: boolean
+  components: MaintenanceComponent[]
+}
+
+export interface MajorRepair {
+  year: number
+  component: string
+  cost: number
+}
+
+export interface YearMaintenanceDetail {
+  maintenanceBase: number      // Routine maintenance (30% of smooth budget)
+  maintenanceShocks: number    // Total shock costs this year
+  maintenanceTotal: number    // Base + shocks
+  majorRepairs: MajorRepair[]  // Individual failures this year
+}
+
 // Unit configuration for multi-family properties
 export interface Unit {
   id: string              // "unit1", "unit2", etc.
@@ -232,6 +319,9 @@ export interface SimulationParams {
     propertyManagerPercent: number  // PM fee as % of rent (typically 8-10%)
     moveOutYear: number             // Year you move out and go full rental
   }
+
+  // Maintenance shock model
+  maintenanceShock: MaintenanceShockConfig
 }
 
 export interface YearResult {
@@ -255,6 +345,8 @@ export interface YearResult {
   delta: number
   // Events
   events: string[]
+  // Maintenance shock details (null if shock model disabled)
+  maintenanceDetail?: YearMaintenanceDetail
 }
 
 export interface SimulationRun {
@@ -270,6 +362,7 @@ export interface SimulationRun {
     depreciationRecapture: number
     netProceeds: number
   }
+  majorRepairs: MajorRepair[]  // All major repairs across all years
 }
 
 export interface RentalInvestmentMetrics {
@@ -286,6 +379,7 @@ export interface SimulationSummary {
     wealthBuy: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number }
     wealthRent: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number }
     delta: { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number }
+    maintenanceShocks?: { p10: number; p50: number; p90: number; mean: number }
   }[]
   // Final outcomes
   finalStats: {
@@ -296,8 +390,29 @@ export interface SimulationSummary {
   }
   // BiggerPockets-style rental investment metrics
   rentalMetrics: RentalInvestmentMetrics
+  // Maintenance shock summary (null if shock model disabled)
+  shockSummary: ShockSummary | null
   // All runs (for detailed analysis)
   runs: SimulationRun[]
+}
+
+export interface ShockSummary {
+  // Probability of at least one major repair in years 1-3
+  probRepairYears1to3: number
+  // Probability of at least one major repair in any year
+  probAnyRepair: number
+  // Average total shock cost over simulation horizon
+  avgTotalShockCost: number
+  // Emergency fund recommendation (90th percentile of worst-year shock)
+  emergencyFundRec: number
+  // Per-component failure rates
+  componentFailureRates: Array<{
+    name: string
+    failureRate: number  // % of simulations where this component failed at least once
+    avgReplacementYear: number  // Average year of first replacement
+  }>
+  // Cash crunch: years where P10 wealth delta goes negative due to shocks
+  cashCrunchYears: number[]
 }
 
 export const alternativeInvestmentPresets = {
@@ -386,12 +501,14 @@ export function runSimulation(params: SimulationParams): SimulationSummary {
   
   // Calculate yearly statistics
   const yearlyStats = []
+  const shockEnabled = params.maintenanceShock?.enabled ?? false
+  
   for (let year = 1; year <= params.years; year++) {
     const wealthBuyValues = runs.map(r => r.years[year - 1]?.wealthBuy || 0)
     const wealthRentValues = runs.map(r => r.years[year - 1]?.wealthRent || 0)
     const deltaValues = runs.map(r => r.years[year - 1]?.delta || 0)
     
-    yearlyStats.push({
+    const yearStats: SimulationSummary['yearlyStats'][number] = {
       year,
       wealthBuy: {
         p10: percentile(wealthBuyValues, 10),
@@ -417,7 +534,22 @@ export function runSimulation(params: SimulationParams): SimulationSummary {
         p90: percentile(deltaValues, 90),
         mean: mean(deltaValues),
       },
-    })
+    }
+    
+    // Add shock percentiles if shock model is enabled
+    if (shockEnabled) {
+      const shockValues = runs.map(r => r.years[year - 1]?.maintenanceDetail?.maintenanceShocks || 0)
+      ;(yearStats as Record<string, unknown>).maintenanceShocks = {
+        p10: percentile(shockValues, 10),
+        p25: percentile(shockValues, 25),
+        p50: percentile(shockValues, 50),
+        p75: percentile(shockValues, 75),
+        p90: percentile(shockValues, 90),
+        mean: mean(shockValues),
+      }
+    }
+    
+    yearlyStats.push(yearStats)
   }
   
   // Final statistics
@@ -464,7 +596,73 @@ export function runSimulation(params: SimulationParams): SimulationSummary {
       buyWinsProbability: finalDelta.filter(d => d > 0).length / finalDelta.length,
     },
     rentalMetrics,
+    shockSummary: shockEnabled ? computeShockSummary(runs, params) : null,
     runs,
+  }
+}
+
+function computeShockSummary(runs: SimulationRun[], params: SimulationParams): ShockSummary {
+  const components = params.maintenanceShock?.components ?? []
+  const years = params.years
+  
+  // Probability of at least one major repair in years 1-3
+  const runsWithRepairYears1to3 = runs.filter(r => 
+    r.majorRepairs.some(rep => rep.year <= 3)
+  )
+  
+  // Probability of at least one major repair in any year
+  const runsWithAnyRepair = runs.filter(r => r.majorRepairs.length > 0)
+  
+  // Average total shock cost
+  const avgTotalShockCost = mean(runs.map(r => 
+    r.years.reduce((sum, yr) => sum + (yr.maintenanceDetail?.maintenanceShocks || 0), 0)
+  ))
+  
+  // Emergency fund: 90th percentile of the worst-year shock cost
+  const worstYearShocks = runs.map(r => {
+    const yearlyShocks = r.years.map(yr => yr.maintenanceDetail?.maintenanceShocks || 0)
+    return Math.max(...yearlyShocks)
+  })
+  const emergencyFundRec = percentile(worstYearShocks, 90)
+  
+  // Per-component failure rates
+  const componentFailureRates = components.map(comp => {
+    const runsWhereFailed = runs.filter(r => 
+      r.majorRepairs.some(rep => rep.component === comp.name)
+    )
+    const firstReplacements = runs
+      .filter(r => r.majorRepairs.some(rep => rep.component === comp.name))
+      .map(r => {
+        const first = r.majorRepairs.find(rep => rep.component === comp.name)
+        return first ? first.year : years
+      })
+    return {
+      name: comp.name,
+      failureRate: runsWhereFailed.length / runs.length,
+      avgReplacementYear: firstReplacements.length > 0 ? mean(firstReplacements) : years,
+    }
+  })
+  
+  // Cash crunch years: years where P10 delta goes negative
+  const cashCrunchYears: number[] = []
+  for (let yr = 1; yr <= years; yr++) {
+    const yearlyShocks = runs.map(r => r.years[yr - 1]?.maintenanceDetail?.maintenanceShocks || 0)
+    if (percentile(yearlyShocks, 10) > 0) {
+      // Check if this shock year makes buying significantly worse
+      const deltasWithShock = runs.map(r => r.years[yr - 1]?.delta || 0)
+      if (percentile(deltasWithShock, 10) < 0) {
+        cashCrunchYears.push(yr)
+      }
+    }
+  }
+  
+  return {
+    probRepairYears1to3: runsWithRepairYears1to3.length / runs.length,
+    probAnyRepair: runsWithAnyRepair.length / runs.length,
+    avgTotalShockCost,
+    emergencyFundRec,
+    componentFailureRates,
+    cashCrunchYears,
   }
 }
 
@@ -615,6 +813,13 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
   const allEvents: string[] = []
   const yearResults: YearResult[] = []
   
+  // Maintenance shock model initialization
+  const shockEnabled = params.maintenanceShock?.enabled ?? false
+  const shockComponents = shockEnabled ? (params.maintenanceShock?.components ?? defaultMaintenanceComponents) : []
+  // Track current age of each component (ageAtPurchase = age when bought, increases by 1 each year)
+  const componentAges: number[] = shockComponents.map(c => c.ageAtPurchase)
+  const allMajorRepairs: MajorRepair[] = []
+  
   // Scenario state
   let sold = false
   let currentMortgageRate = mortgageRate
@@ -644,6 +849,7 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
         wealthRent: stockPortfolio,
         delta: 0,
         events: ['Sold'],
+        maintenanceDetail: undefined,  // No maintenance detail after selling
       })
       // Stochastic rent growth in sold path too
       const soldRentGrowthRate = useStochasticRent
@@ -655,6 +861,8 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     }
     
     const events: string[] = []
+    let yearMaintenanceDetail: YearMaintenanceDetail | undefined = undefined
+    let yearMajorRepairs: MajorRepair[] = []
     
     // Check for job loss scenario
     if (scenarios.jobLoss && !jobLossActive) {
@@ -721,6 +929,7 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
           wealthRent: stockPortfolio,
           delta: netSaleProceeds + buyerStockPortfolio - stockPortfolio,
           events,
+          maintenanceDetail: yearMaintenanceDetail,
         })
         continue
       }
@@ -750,10 +959,58 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     
     const annualPropertyTax = homePrice * propertyTaxRate * taxGrowthFactor * (year === 1 ? year1Proration : 1)
     const annualInsurance = insuranceAnnual * insuranceGrowthFactor * (year === 1 ? year1Proration : 1)
-    // Maintenance is a flat annual cost, not % of home value (a $2M home doesn't cost 2x to maintain)
-    // maintenanceAnnual covers repairs, appliances, HVAC, etc.
-    // For condos with HOA, this should be lower since HOA covers exterior/structural
-    const annualMaintenance = (params.maintenanceAnnual || 0) * Math.pow(1.03, year - 1) * (year === 1 ? year1Proration : 1)
+    // Maintenance: use shock model if enabled, otherwise smooth annual amount
+    // Shock model: base maintenance = 30% of smooth, components roll for failures
+    const smoothMaintenance = (params.maintenanceAnnual || 0) * Math.pow(1.03, year - 1) * (year === 1 ? year1Proration : 1)
+    let annualMaintenance: number
+    
+    if (shockEnabled) {
+      // Base routine maintenance = 30% of smooth amount
+      const maintenanceBase = smoothMaintenance * 0.3
+      let maintenanceShocks = 0
+      
+      // Roll for each component
+      for (let ci = 0; ci < shockComponents.length; ci++) {
+        const comp = shockComponents[ci]
+        const age = componentAges[ci]
+        const failureProb = comp.failureProbability(age)
+        
+        if (Math.random() < failureProb) {
+          // Component failed!
+          maintenanceShocks += comp.replacementCost
+          yearMajorRepairs.push({
+            year,
+            component: comp.name,
+            cost: comp.replacementCost,
+          })
+          allMajorRepairs.push({
+            year,
+            component: comp.name,
+            cost: comp.replacementCost,
+          })
+          events.push(`${comp.name} replacement ($${(comp.replacementCost / 1000).toFixed(0)}k)`)
+          allEvents.push(`Year ${year}: ${comp.name} replacement ($${(comp.replacementCost / 1000).toFixed(0)}k)`)
+          
+          // Reset component age to 0 (new replacement)
+          componentAges[ci] = 0
+        } else {
+          // Component survived, age it by 1 year
+          componentAges[ci]++
+        }
+      }
+      
+      const maintenanceTotal = maintenanceBase + maintenanceShocks
+      annualMaintenance = maintenanceTotal
+      
+      yearMaintenanceDetail = {
+        maintenanceBase: Math.round(maintenanceBase),
+        maintenanceShocks: Math.round(maintenanceShocks),
+        maintenanceTotal: Math.round(maintenanceTotal),
+        majorRepairs: yearMajorRepairs,
+      }
+    } else {
+      annualMaintenance = smoothMaintenance
+    }
     const annualPMI = (fthb.enabled && fthb.noPMI) ? 0 : ((loanAmount / homeValue) > 0.8 ? loanAmount * 0.005 : 0) * (year === 1 ? year1Proration : 1)
     const annualHOA = (params.hoaMonthly || 0) * 12 * Math.pow(1.03, year - 1) * (year === 1 ? year1Proration : 1)
     
@@ -1053,6 +1310,7 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
       wealthRent: Math.round(wealthRent),
       delta: Math.round(delta),
       events,
+      maintenanceDetail: yearMaintenanceDetail,
     })
   }
   
@@ -1119,6 +1377,7 @@ function simulateSingleRun(params: SimulationParams, runId: number): SimulationR
     finalWealthRent: finalWealthRent,
     finalDelta: Math.round(finalWealthBuyNet - finalWealthRent),
     events: allEvents,
+    majorRepairs: allMajorRepairs,
     exitDetails: {
       sellingCosts: Math.round(sellingCosts),
       capitalGainsTax: Math.round(capitalGainsTax),
@@ -1228,6 +1487,12 @@ export const defaultParams: SimulationParams = {
   remoteLandlord: {
     propertyManagerPercent: 0.10,  // 10% PM fee
     moveOutYear: 5,                // Move out after year 5
+  },
+  
+  // Maintenance shock model (disabled by default = backward compatible)
+  maintenanceShock: {
+    enabled: false,
+    components: defaultMaintenanceComponents,
   },
 }
 
