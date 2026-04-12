@@ -8,14 +8,15 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   AreaChart, Area, ComposedChart, ReferenceLine,
 } from 'recharts'
-import { 
+import {
   runSimulation, defaultParams, SimulationParams, SimulationSummary, SimulationRun,
   Unit, createMultiFamilyUnits, getUnitSummary,
   runSensitivityAnalysis, SensitivityResult,
   runBreakEvenSurface, BreakEvenSurface,
   runWhatIfAnalysis, WhatIfResult, WhatIfScenario,
   alternativeInvestmentPresets, getAlternativeInvestmentLabel,
-  stateTaxProfiles, StateTaxProfileKey, getStateTaxProfileLabel
+  stateTaxProfiles, StateTaxProfileKey, getStateTaxProfileLabel,
+  defaultMaintenanceComponents
 } from '@/lib/monte-carlo'
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
 import { ResultsSkeleton, SimulationProgress } from '@/components/Skeleton'
@@ -46,8 +47,8 @@ export default function HousePage() {
 }
 
 function formatCurrency(n: number): string {
-  return new Intl.NumberFormat('en-US', { 
-    style: 'currency', 
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
@@ -61,24 +62,24 @@ function formatPercent(n: number): string {
 // Math Explained Component - Shows all calculations with user's values
 function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simResults: SimulationSummary | null }) {
   const [isExpanded, setIsExpanded] = useState(false)
-  
+
   if (!simResults) return null
 
   const alternativeInvestmentLabel = getAlternativeInvestmentLabel(inputs)
   const stateProfileLabel = getStateTaxProfileLabel(inputs.stateProfile)
-  
+
   // Calculate all the values we'll show
   const downPayment = inputs.homePrice * (inputs.downPaymentPercent / 100)
   const loanAmount = inputs.homePrice - downPayment
   const closingCosts = inputs.homePrice * (inputs.closingCostPercent / 100)
   const totalUpfront = downPayment + closingCosts
-  
+
   // Monthly mortgage payment (P&I)
   const monthlyRate = inputs.mortgageRate / 12
   const numPayments = 360
   const monthlyPI = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1)
   const annualPI = monthlyPI * 12
-  
+
   // Annual costs
   const annualPropertyTax = inputs.homePrice * inputs.propertyTaxRate
   const annualInsurance = inputs.insuranceAnnual
@@ -87,7 +88,7 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
   // PMI: required if LTV > 80%, unless FTHB noPMI benefit
   const needsPMI = (loanAmount / inputs.homePrice) > 0.8 && !(inputs.firstTimeHomeBuyer?.enabled && inputs.firstTimeHomeBuyer?.noPMI)
   const annualPMI = needsPMI ? loanAmount * 0.005 : 0
-  
+
   // Year 1 interest - calculate actual amortization for first 12 payments
   let year1Interest = 0
   let year1Principal = 0
@@ -99,20 +100,20 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
     year1Principal += monthPrincipal
     balance -= monthPrincipal
   }
-  
+
   // Rental income (if applicable)
   const hasRental = inputs.units.length > 0 || inputs.houseHack
-  const monthlyRentalIncome = inputs.units.length > 0 
+  const monthlyRentalIncome = inputs.units.length > 0
     ? inputs.units.filter(u => !u.ownerOccupied).reduce((sum, u) => sum + u.monthlyRent, 0)
     : inputs.houseHack ? inputs.rentalIncome : 0
   const annualRentalIncome = monthlyRentalIncome * 12 * (1 - (inputs.vacancyRate || 0))
-  
+
   // Owner vs rental portion
-  const ownerPortion = inputs.units.length > 0 
+  const ownerPortion = inputs.units.length > 0
     ? inputs.units.filter(u => u.ownerOccupied).length / inputs.units.length
     : inputs.houseHack ? 0.5 : 1.0
   const rentalPortion = 1 - ownerPortion
-  
+
   // Tax deductions - owner portion
   const standardDeduction = inputs.filingStatus === 'married' ? 32200 : 16100  // 2026 IRS values
   const ownerInterest = year1Interest * ownerPortion
@@ -121,26 +122,26 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
   const saltDeduction = Math.min(ownerPropertyTax + stateIncomeTax, 40000)
   // $750k limit applies to owner-occupied portion of loan only
   const ownerLoanPortion = loanAmount * ownerPortion
-  const mortgageInterestDeduction = ownerLoanPortion <= 750000 
-    ? ownerInterest 
+  const mortgageInterestDeduction = ownerLoanPortion <= 750000
+    ? ownerInterest
     : ownerInterest * (750000 / ownerLoanPortion)
   const totalItemized = mortgageInterestDeduction + saltDeduction
   const ownerTaxBenefit = totalItemized > standardDeduction ? (totalItemized - standardDeduction) * inputs.federalBracket : 0
-  
+
   // Rental tax benefits - Schedule E
   const buildingValue = inputs.homePrice * (inputs.buildingValuePercent || 0.80)
   const rentalBuildingValue = buildingValue * rentalPortion
   const annualDepreciation = hasRental ? rentalBuildingValue / 27.5 : 0
-  
+
   const rentalInterest = year1Interest * rentalPortion
   const rentalPropertyTax = annualPropertyTax * rentalPortion
   const rentalInsurance = annualInsurance * rentalPortion
   const rentalHOA = annualHOA * rentalPortion
   const rentalMaintenance = annualMaintenance * rentalPortion
-  
+
   const scheduleEExpenses = rentalInterest + rentalPropertyTax + rentalInsurance + rentalHOA + rentalMaintenance + annualDepreciation
   const passiveLoss = Math.max(0, scheduleEExpenses - annualRentalIncome)
-  
+
   // Passive loss allowance ($25k, phases out $100-150k AGI)
   let passiveLossAllowance = 0
   if (passiveLoss > 0 && inputs.w2Income < 150000) {
@@ -152,29 +153,29 @@ function MathExplained({ inputs, simResults }: { inputs: SimulationParams; simRe
       passiveLossAllowance = Math.min(passiveLoss, Math.max(0, maxAllowance - phaseOutReduction))
     }
   }
-  
+
   // Rental tax benefit is ONLY the passive loss allowance that offsets W2 income
   // (The rental income itself is already subtracted from gross costs separately)
   const rentalTaxBenefit = passiveLossAllowance * inputs.federalBracket
-  
+
   const totalTaxBenefit = ownerTaxBenefit + rentalTaxBenefit
-  
+
   // Total cost of buying (Year 1)
   const totalAnnualCostBuy = annualPI + annualPropertyTax + annualInsurance + annualMaintenance + annualHOA + annualPMI
   const netCostBuy = totalAnnualCostBuy - annualRentalIncome - totalTaxBenefit
-  
+
   // Rent scenario
   const annualRent = inputs.currentRent * 12
   const monthlySavings = (netCostBuy - annualRent) / 12
-  
+
   // Projected values (Year N at median)
   const finalYear = simResults.yearlyStats[simResults.yearlyStats.length - 1]
-  
+
   // Export function - generates markdown summary of all calculations
   const exportMath = () => {
     const f = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
     const pct = (n: number) => `${(n * 100).toFixed(2)}%`
-    
+
     const markdown = `# House vs Rent Analysis
 Generated: ${new Date().toLocaleDateString()}
 
@@ -264,7 +265,7 @@ ${hasRental ? `### Rental (Schedule E)
 ---
 *Generated by HouseSim (house-vs-rent.netlify.app)*
 `
-    
+
     // Create and download file
     const blob = new Blob([markdown], { type: 'text/markdown' })
     const url = URL.createObjectURL(blob)
@@ -276,7 +277,7 @@ ${hasRental ? `### Rental (Schedule E)
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
-  
+
   // Export CSV with formulas for Google Sheets
   const exportCSV = () => {
     // Calculate all values needed for export
@@ -285,7 +286,7 @@ ${hasRental ? `### Rental (Schedule E)
     const costSeg = inputs.taxStrategies?.costSegregation || { enabled: false, shortLifePercent: 0.20 }
     const qbi = inputs.taxStrategies?.qbi || { enabled: false }
     const exitStrategy = inputs.exitStrategy || 'sell'
-    
+
     // Cost segregation depreciation
     const rentalBuildingValue = inputs.homePrice * 0.8 * rentalPortion
     let year1Depreciation = rentalBuildingValue / 27.5
@@ -295,18 +296,18 @@ ${hasRental ? `### Rental (Schedule E)
       const longLifeValue = rentalBuildingValue * (1 - costSeg.shortLifePercent)
       year1Depreciation = shortLifeValue + (longLifeValue / 27.5)
     }
-    
+
     // Passive loss with cost seg
-    const scheduleEExpensesCostSeg = (year1Interest * rentalPortion) + (annualPropertyTax * rentalPortion) + 
+    const scheduleEExpensesCostSeg = (year1Interest * rentalPortion) + (annualPropertyTax * rentalPortion) +
       (annualInsurance * rentalPortion) + (annualMaintenance * rentalPortion) + year1Depreciation
     const passiveLossCostSeg = Math.max(0, scheduleEExpensesCostSeg - annualRentalIncome)
     suspendedLossPerYear = Math.max(0, passiveLossCostSeg - passiveLossAllowance)
-    
+
     // Exit calculations (10 year projection)
     const years = inputs.years || 10
     const appreciationRate = inputs.appreciationMean || 0.05
     const futureHomeValue = inputs.homePrice * Math.pow(1 + appreciationRate, years)
-    const totalDepreciation = costSeg.enabled 
+    const totalDepreciation = costSeg.enabled
       ? (rentalBuildingValue * costSeg.shortLifePercent) + ((rentalBuildingValue * (1 - costSeg.shortLifePercent)) / 27.5 * years)
       : (rentalBuildingValue / 27.5) * years
     const totalSuspendedLosses = suspendedLossPerYear * years
@@ -316,7 +317,7 @@ ${hasRental ? `### Rental (Schedule E)
     const capitalGainsTax = (exitStrategy === 'hold' || exitStrategy === '1031') ? 0 : taxableGain * 0.15
     const depreciationRecapture = (exitStrategy === 'hold' || exitStrategy === '1031') ? 0 : totalDepreciation * 0.25
     const sellingCosts = (exitStrategy === 'hold') ? 0 : futureHomeValue * 0.06
-    
+
     const csv = `House vs Rent Calculator - Full Export
 Generated: ${new Date().toISOString()}
 URL: ${typeof window !== 'undefined' ? window.location.href : ''}
@@ -470,13 +471,13 @@ Primary Residence Exemption,$250k/$500k,Section 121
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
-  
+
   // Share function - generates URL with ALL parameters (only non-default values)
   const [copied, setCopied] = useState(false)
   const shareUrl = () => {
     const params = new URLSearchParams()
     const d = defaultParams  // Compare against defaults
-    
+
     // Helper to add param only if different from default
     const add = (key: string, val: number | string, def?: number | string) => {
       if (def === undefined || val !== def) params.set(key, val.toString())
@@ -484,7 +485,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
     const addPct = (key: string, val: number, def?: number) => {
       if (def === undefined || val !== def) params.set(key, (val * 100).toString())
     }
-    
+
     // House (always include core params)
     params.set('price', inputs.homePrice.toString())
     params.set('down', inputs.downPaymentPercent.toString())
@@ -492,25 +493,25 @@ Primary Residence Exemption,$250k/$500k,Section 121
     add('state', inputs.stateProfile, d.stateProfile)
     addPct('tax', inputs.propertyTaxRate, d.propertyTaxRate)
     add('insurance', inputs.insuranceAnnual, d.insuranceAnnual)
-    
+
     // Additional costs
     add('closing', inputs.closingCostPercent, d.closingCostPercent)
     add('hoa', inputs.hoaMonthly, d.hoaMonthly)
     add('maint', inputs.maintenanceAnnual, d.maintenanceAnnual)
-    
+
     // House hack / rental
     if (inputs.houseHack) params.set('househack', '1')
     if (inputs.rentalIncome > 0) add('rental', inputs.rentalIncome, 0)
     addPct('rentalgrowth', inputs.rentalIncomeGrowth, d.rentalIncomeGrowth)
     addPct('vacancy', inputs.vacancyRate, d.vacancyRate)
-    
+
     // Tax
     add('income', inputs.w2Income, d.w2Income)
     addPct('fedbracket', inputs.federalBracket, d.federalBracket)
     addPct('staterate', inputs.stateRate, d.stateRate)
     if (inputs.filingStatus !== d.filingStatus) params.set('filing', inputs.filingStatus)
     addPct('buildingpct', inputs.buildingValuePercent, d.buildingValuePercent)
-    
+
     // Alternative (rent)
     params.set('rent', inputs.currentRent.toString())
     addPct('rentgrowth', inputs.rentGrowth, d.rentGrowth)
@@ -520,34 +521,34 @@ Primary Residence Exemption,$250k/$500k,Section 121
     addPct('rentcorr', inputs.rentHomeCorrelation, d.rentHomeCorrelation)
     addPct('rentfloor', inputs.rentFloor, d.rentFloor)
     if (inputs.alternativeInvestmentPreset !== d.alternativeInvestmentPreset) params.set('alt', inputs.alternativeInvestmentPreset)
-    
+
     // Distributions
     addPct('appr', inputs.appreciationMean, d.appreciationMean)
     addPct('apprstd', inputs.appreciationStdDev, d.appreciationStdDev)
     addPct('stock', inputs.stockReturnMean, d.stockReturnMean)
     addPct('stockstd', inputs.stockReturnStdDev, d.stockReturnStdDev)
     addPct('corr', inputs.marketCorrelation, d.marketCorrelation)
-    
+
     // Cost growth
     addPct('taxgrowth', inputs.propertyTaxGrowth, d.propertyTaxGrowth)
     addPct('insgrowth', inputs.insuranceGrowth, d.insuranceGrowth)
-    
+
     // Exit costs
     add('sellcost', inputs.sellingCostPercent, d.sellingCostPercent)
     addPct('capgains', inputs.capitalGainsTaxRate, d.capitalGainsTaxRate)
-    
+
     // Simulation
     params.set('years', inputs.years.toString())
     add('sims', inputs.numSimulations, d.numSimulations)
     add('close', inputs.closingMonth, d.closingMonth)
-    
+
     // Multi-family
     if (inputs.units.length > 0) {
       params.set('type', `${inputs.units.length}-family`)
       const totalRent = inputs.units.filter(u => !u.ownerOccupied).reduce((sum, u) => sum + u.monthlyRent, 0)
       params.set('rental', totalRent.toString())
     }
-    
+
     // FTHB
     if (inputs.firstTimeHomeBuyer?.enabled) {
       params.set('fthb', '1')
@@ -556,7 +557,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
       if (inputs.firstTimeHomeBuyer.rateDiscount > 0) params.set('discount', (inputs.firstTimeHomeBuyer.rateDiscount * 100).toString())
       if (inputs.firstTimeHomeBuyer.taxCredit > 0) params.set('taxcredit', inputs.firstTimeHomeBuyer.taxCredit.toString())
     }
-    
+
     // HELOC
     if (inputs.heloc?.enabled) {
       params.set('heloc', '1')
@@ -565,24 +566,31 @@ Primary Residence Exemption,$250k/$500k,Section 121
       if (inputs.heloc.rate !== 0.08) params.set('helocrate', (inputs.heloc.rate * 100).toString())
       if (!inputs.heloc.deployToStocks) params.set('helocnostocks', '1')
     }
-    
+
     // Exit Strategy
     if (inputs.exitStrategy && inputs.exitStrategy !== 'sell') {
       params.set('exit', inputs.exitStrategy)
     }
-    
+
     // Tax Strategies
     if (inputs.taxStrategies?.costSegregation?.enabled) params.set('costseg', '1')
     if (inputs.taxStrategies?.qbi?.enabled) params.set('qbi', '1')
     // Note: 1031 is now part of exitStrategy, but keep for backwards compat
     if (inputs.taxStrategies?.exchange1031?.enabled) params.set('1031', '1')
     
+    // Maintenance Shock Model
+    if (inputs.maintenanceShock?.enabled) params.set('shock', '1')
+    if (inputs.maintenanceShock?.components) {
+      const compAges = inputs.maintenanceShock.components.map(c => c.ageAtPurchase).join(',')
+      params.set('shockages', compAges)
+    }
+
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
     navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
-  
+
   return (
     <Section title="How The Math Works">
       <div className="flex gap-2">
@@ -620,10 +628,10 @@ Primary Residence Exemption,$250k/$500k,Section 121
           <span className="hidden sm:inline">Sheets</span>
         </button>
       </div>
-      
+
       {isExpanded && (
         <div className="mt-4 space-y-6 text-sm">
-          
+
           {/* Step 1: Upfront Costs */}
           <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl">
             <h4 className="text-info font-bold mb-3">Step 1: What You Pay Upfront</h4>
@@ -634,7 +642,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
               </div>
               <div className="flex justify-between pl-4 text-[var(--content-subtle)]">
                 <span>Down Payment ({inputs.downPaymentPercent}%)</span>
-                <span className="font-mono">− {formatCurrency(downPayment)}</span>
+                <span className="font-mono">- {formatCurrency(downPayment)}</span>
               </div>
               <div className="flex justify-between border-t border-[var(--border)] pt-2">
                 <span>Loan Amount</span>
@@ -653,13 +661,13 @@ Primary Residence Exemption,$250k/$500k,Section 121
               💡 This is the capital you need to buy. If renting, this money goes into the stock market instead.
             </p>
           </div>
-          
+
           {/* Step 2: Monthly Mortgage */}
           <div className="p-4 bg-primary-muted border border-primary/30 rounded-xl">
             <h4 className="text-primary font-bold mb-3">Step 2: Your Mortgage Payment</h4>
             <div className="space-y-2 text-[var(--content-muted)]">
               <div className="text-[var(--content-subtle)] text-xs mb-2">
-                Formula: P = L × [r(1+r)ⁿ] / [(1+r)ⁿ - 1]
+                Formula: P = L × [r(1+r)n] / [(1+r)n - 1]
                 <br />
                 Where L = loan, r = monthly rate, n = payments
               </div>
@@ -688,7 +696,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
               💡 In Year 1, ~{(0.85 * 100).toFixed(0)}% ({formatCurrency(year1Interest)}) goes to interest, only ~{(0.15 * 100).toFixed(0)}% ({formatCurrency(year1Principal)}) builds equity.
             </p>
           </div>
-          
+
           {/* Step 3: Total Annual Costs */}
           <div className="p-4 bg-error-muted border border-error/30 rounded-xl">
             <h4 className="text-error font-bold mb-3">Step 3: Total Cost of Owning (Year 1)</h4>
@@ -725,21 +733,21 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 <span className="font-bold">Gross Annual Cost</span>
                 <span className="font-mono font-bold">{formatCurrency(totalAnnualCostBuy)}</span>
               </div>
-              
+
               {/* Deductions */}
               {hasRental && (
                 <div className="flex justify-between text-success">
-                  <span>− Rental Income (after {((inputs.vacancyRate || 0) * 100).toFixed(0)}% vacancy)</span>
-                  <span className="font-mono">−{formatCurrency(annualRentalIncome)}</span>
+                  <span>- Rental Income (after {((inputs.vacancyRate || 0) * 100).toFixed(0)}% vacancy)</span>
+                  <span className="font-mono">-{formatCurrency(annualRentalIncome)}</span>
                 </div>
               )}
               {totalTaxBenefit > 0 && (
                 <div className="flex justify-between text-success">
-                  <span>− Tax Savings (owner + rental)</span>
-                  <span className="font-mono">−{formatCurrency(totalTaxBenefit)}</span>
+                  <span>- Tax Savings (owner + rental)</span>
+                  <span className="font-mono">-{formatCurrency(totalTaxBenefit)}</span>
                 </div>
               )}
-              
+
               <div className="flex justify-between border-t border-[var(--border)] pt-2 text-error">
                 <span className="font-bold">Net Annual Cost (Buying)</span>
                 <span className="font-mono font-bold">{formatCurrency(netCostBuy)}</span>
@@ -750,7 +758,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
               </div>
             </div>
           </div>
-          
+
           {/* Step 4: Tax Math */}
           <div className="p-4 bg-warning-muted border border-warning/30 rounded-xl">
             <h4 className="text-warning font-bold mb-3">Step 4: Tax Deductions Explained</h4>
@@ -764,7 +772,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                   Owner portion: {(ownerPortion * 100).toFixed(0)}% | Rental portion: {(rentalPortion * 100).toFixed(0)}%
                 </div>
               )}
-              
+
               {/* Owner-Occupied Deductions */}
               <div className="text-[var(--content-subtle)] text-xs mt-2">Owner-Occupied (Schedule A):</div>
               <div className="flex justify-between pl-4">
@@ -795,7 +803,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                   <span className="font-mono">{formatCurrency(ownerTaxBenefit)}</span>
                 </div>
               )}
-              
+
               {/* Rental Deductions */}
               {hasRental && (
                 <>
@@ -819,7 +827,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                   {passiveLoss > 0 && (
                     <>
                       <div className="flex justify-between pl-4 text-warning">
-                        <span>Passive Loss (expenses − income)</span>
+                        <span>Passive Loss (expenses - income)</span>
                         <span className="font-mono">{formatCurrency(passiveLoss)}</span>
                       </div>
                       <div className="flex justify-between pl-4 text-success">
@@ -839,7 +847,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
                   </div>
                 </>
               )}
-              
+
               <div className="flex justify-between border-t border-[var(--border)] pt-2 text-warning">
                 <span className="font-bold">TOTAL TAX SAVINGS</span>
                 <span className="font-mono font-bold">{formatCurrency(totalTaxBenefit)}/yr</span>
@@ -849,7 +857,7 @@ Primary Residence Exemption,$250k/$500k,Section 121
               💡 Using the {stateProfileLabel} profile for default state income and property-tax assumptions. Manual edits switch the profile to Custom and keep the math live.
             </p>
           </div>
-          
+
           {/* Step 5: Rent Comparison */}
           <div className="p-4 bg-emerald-900/20 border border-emerald-500/30 rounded-xl">
             <h4 className="text-emerald-400 font-bold mb-3">Step 5: Rent + Invest Alternative</h4>
@@ -913,13 +921,13 @@ Primary Residence Exemption,$250k/$500k,Section 121
               {netCostBuy < annualRent && ` If buying is cheaper, YOU invest the ${formatCurrency(Math.abs(monthlySavings))}/mo savings.`}
             </p>
           </div>
-          
+
           {/* Step 6: Distributions */}
           <div className="p-4 bg-info-muted border border-info/30 rounded-xl">
             <h4 className="text-info font-bold mb-3">Step 6: Return Distributions</h4>
             <div className="space-y-3 text-[var(--content-muted)]">
               <p>
-                We run <span className="text-info font-bold">{inputs.numSimulations.toLocaleString()}</span> simulations. 
+                We run <span className="text-info font-bold">{inputs.numSimulations.toLocaleString()}</span> simulations.
                 In each one, we randomly sample:
               </p>
               <div className="grid grid-cols-2 gap-4">
@@ -947,12 +955,12 @@ Primary Residence Exemption,$250k/$500k,Section 121
                 </div>
               </div>
               <p className="text-[var(--content-subtle)] text-xs">
-                Each year, we draw random returns from normal distributions and compound them. 
+                Each year, we draw random returns from normal distributions and compound them.
                 After {inputs.years} years, we compare: <span className="text-info">Home Equity</span> vs <span className="text-success">Stock Portfolio</span>.
               </p>
             </div>
           </div>
-          
+
           {/* Step 7: Final Comparison */}
           <div className="p-4 bg-gradient-to-br from-green-900/30 to-blue-900/30 border border-[var(--border)] rounded-xl">
             <h4 className="text-[var(--content)] font-bold mb-3">Step 7: Final Wealth Comparison (Year {inputs.years})</h4>
@@ -1004,20 +1012,20 @@ Primary Residence Exemption,$250k/$500k,Section 121
               </div>
             </div>
           </div>
-          
+
           {/* Disclaimer */}
           <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-xs text-[var(--content-subtle)]">
             <strong className="text-[var(--content-subtle)]">Important Caveats:</strong>
             <ul className="mt-2 space-y-1 list-disc list-inside">
               <li>This assumes you stay the full {inputs.years} years. Selling early typically favors renting.</li>
-              <li>Real returns have "fat tails" — extreme outcomes (crashes, booms) happen more than normal distributions suggest.</li>
-              <li>Housing and stocks are modeled with {((inputs.marketCorrelation || 0.3) * 100).toFixed(0)}% correlation — they often move together in crises.</li>
+              <li>Real returns have "fat tails" - extreme outcomes (crashes, booms) happen more than normal distributions suggest.</li>
+              <li>Housing and stocks are modeled with {((inputs.marketCorrelation || 0.3) * 100).toFixed(0)}% correlation - they often move together in crises.</li>
               <li>This ignores lifestyle factors: stability, ability to renovate, forced savings discipline, etc.</li>
               <li>Tax laws change. This uses 2026 rules (SALT cap, mortgage interest limits).</li>
               <li>This is not financial advice. It's math. Your situation may differ.</li>
             </ul>
           </div>
-          
+
         </div>
       )}
     </Section>
@@ -1048,25 +1056,25 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
   const [hoveredBin, setHoveredBin] = useState<HistogramBin | null>(null)
   const [selectedBin, setSelectedBin] = useState<HistogramBin | null>(null)
   const [animationComplete, setAnimationComplete] = useState(false)
-  
+
   // Calculate histogram bins from runs
   const histogramData = useMemo(() => {
     const deltas = runs.map(r => r.finalDelta)
     const min = Math.min(...deltas)
     const max = Math.max(...deltas)
-    
+
     // Use ~20-30 bins for good granularity
     const numBins = Math.min(30, Math.max(15, Math.ceil(Math.sqrt(runs.length))))
     const binWidth = (max - min) / numBins
-    
+
     // Create bins
     const bins: HistogramBin[] = []
     let cumulative = 0
-    
+
     for (let i = 0; i < numBins; i++) {
       const rangeMin = min + i * binWidth
       const rangeMax = min + (i + 1) * binWidth
-      
+
       const runsInBin = runs.filter(r => {
         if (i === numBins - 1) {
           // Last bin includes the max value
@@ -1074,11 +1082,11 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
         }
         return r.finalDelta >= rangeMin && r.finalDelta < rangeMax
       })
-      
+
       const count = runsInBin.length
       const percentage = (count / runs.length) * 100
       cumulative += count
-      
+
       bins.push({
         rangeMin,
         rangeMax,
@@ -1093,29 +1101,29 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
         })),
       })
     }
-    
+
     return { bins, min, max, maxCount: Math.max(...bins.map(b => b.count)) }
   }, [runs])
-  
+
   // Trigger animation on mount
   useEffect(() => {
     const timer = setTimeout(() => setAnimationComplete(true), 50)
     return () => clearTimeout(timer)
   }, [runs])
-  
+
   // Reset animation when runs change
   useEffect(() => {
     setAnimationComplete(false)
     const timer = setTimeout(() => setAnimationComplete(true), 50)
     return () => clearTimeout(timer)
   }, [runs])
-  
+
   // Calculate percentile for a given value
   const getPercentile = (value: number) => {
     const count = runs.filter(r => r.finalDelta <= value).length
     return (count / runs.length) * 100
   }
-  
+
   return (
     <div className="space-y-4">
       {/* Histogram Chart */}
@@ -1124,7 +1132,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
         <div className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-90 text-[var(--content-subtle)] text-xs whitespace-nowrap">
           Simulations
         </div>
-        
+
         {/* Chart area */}
         <div className="ml-8 h-48 md:h-64 flex items-end gap-[1px] md:gap-0.5">
           {histogramData.bins.map((bin, idx) => {
@@ -1132,23 +1140,23 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
             const isNegative = bin.rangeMax < 0
             const isPositive = bin.rangeMin >= 0
             const isZeroCrossing = bin.rangeMin < 0 && bin.rangeMax >= 0
-            
+
             // Color based on delta value
             let bgColor = 'bg-blue-500'
             if (isNegative) bgColor = 'bg-error'
             else if (isPositive) bgColor = 'bg-success'
             else if (isZeroCrossing) bgColor = 'bg-gradient-to-t from-error to-success'
-            
+
             const isHovered = hoveredBin === bin
             const isSelected = selectedBin === bin
-            
+
             return (
               <div
                 key={idx}
                 className={`flex-1 relative cursor-pointer transition-all duration-300 ease-out
                            ${isHovered || isSelected ? 'opacity-100 scale-y-105' : 'opacity-80 hover:opacity-95'}
                            ${isSelected ? 'ring-2 ring-[var(--border)]' : ''}`}
-                style={{ 
+                style={{
                   height: animationComplete ? `${heightPercent}%` : '0%',
                   transitionDelay: `${idx * 15}ms`,
                 }}
@@ -1157,7 +1165,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
                 onClick={() => setSelectedBin(selectedBin === bin ? null : bin)}
               >
                 <div className={`absolute inset-0 ${bgColor} rounded-t-sm`} />
-                
+
                 {/* Percentile markers on specific bins */}
                 {idx > 0 && histogramData.bins[idx - 1].cumulativePercentile < 10 && bin.cumulativePercentile >= 10 && (
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-[var(--content-subtle)] whitespace-nowrap">P10</div>
@@ -1172,27 +1180,27 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
             )
           })}
         </div>
-        
+
         {/* X-axis */}
         <div className="ml-8 flex justify-between mt-2 text-xs text-[var(--content-subtle)]">
           <span>{formatCurrency(histogramData.min)}</span>
           <span className="text-[var(--content-subtle)]">← Rent wins | Buy wins →</span>
           <span>{formatCurrency(histogramData.max)}</span>
         </div>
-        
+
         {/* Zero line indicator */}
         {histogramData.min < 0 && histogramData.max > 0 && (
-          <div 
+          <div
             className="absolute bottom-8 w-0.5 h-48 md:h-64 bg-[var(--surface-muted)]"
-            style={{ 
-              left: `calc(2rem + ${((0 - histogramData.min) / (histogramData.max - histogramData.min)) * 100}% - 1px)` 
+            style={{
+              left: `calc(2rem + ${((0 - histogramData.min) / (histogramData.max - histogramData.min)) * 100}% - 1px)`
             }}
           >
             <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-[var(--content-muted)] whitespace-nowrap">$0</span>
           </div>
         )}
       </div>
-      
+
       {/* Hover tooltip */}
       {hoveredBin && !selectedBin && (
         <div className="p-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg animate-in fade-in duration-150">
@@ -1207,12 +1215,12 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
             </div>
             <div>
               <span className="text-[var(--content-subtle)]">Percentile:</span>
-              <span className="text-[var(--content)] ml-1 font-mono">P{Math.round(hoveredBin.cumulativePercentile - hoveredBin.percentage / 2)} – P{Math.round(hoveredBin.cumulativePercentile)}</span>
+              <span className="text-[var(--content)] ml-1 font-mono">P{Math.round(hoveredBin.cumulativePercentile - hoveredBin.percentage / 2)} - P{Math.round(hoveredBin.cumulativePercentile)}</span>
             </div>
           </div>
         </div>
       )}
-      
+
       {/* Selected bin detail panel */}
       {selectedBin && (
         <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl animate-in slide-in-from-bottom-2 duration-200">
@@ -1220,14 +1228,14 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
             <h4 className="text-[var(--content)] font-medium">
               Bin Details: {formatCurrency(selectedBin.rangeMin)} to {formatCurrency(selectedBin.rangeMax)}
             </h4>
-            <button 
+            <button
               onClick={() => setSelectedBin(null)}
               className="text-[var(--content-subtle)] hover:text-[var(--content-muted)] transition-colors"
             >
               ✕
             </button>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="bg-[var(--surface)] rounded-lg p-2">
               <div className="text-[var(--content-subtle)] text-xs">Simulations</div>
@@ -1236,7 +1244,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
             </div>
             <div className="bg-[var(--surface)] rounded-lg p-2">
               <div className="text-[var(--content-subtle)] text-xs">Percentile Range</div>
-              <div className="text-[var(--content)] font-mono text-lg">P{Math.round(selectedBin.cumulativePercentile - selectedBin.percentage)} – P{Math.round(selectedBin.cumulativePercentile)}</div>
+              <div className="text-[var(--content)] font-mono text-lg">P{Math.round(selectedBin.cumulativePercentile - selectedBin.percentage)} - P{Math.round(selectedBin.cumulativePercentile)}</div>
             </div>
             <div className="bg-[var(--surface)] rounded-lg p-2">
               <div className="text-[var(--content-subtle)] text-xs">Avg Delta</div>
@@ -1251,7 +1259,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
               </div>
             </div>
           </div>
-          
+
           {/* Sample runs from this bin */}
           <div className="text-[var(--content-subtle)] text-xs mb-2">Sample Simulations (up to 10)</div>
           <div className="space-y-1 max-h-32 overflow-y-auto">
@@ -1268,7 +1276,7 @@ function DeltaHistogram({ runs, finalStats, numSimulations, formatCurrency }: De
           </div>
         </div>
       )}
-      
+
       {/* Legend / Key Stats */}
       <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-[var(--content-subtle)]">
         <div className="flex items-center gap-1.5">
@@ -1293,7 +1301,7 @@ function HousePageInner() {
   const stateProfileLabel = getStateTaxProfileLabel(inputs.stateProfile)
   const [simResults, setSimResults] = useState<SimulationSummary | null>(null)
   const [isRunning, setIsRunning] = useState(false)
-  
+
   // Advanced analysis state
   const [sensitivityResults, setSensitivityResults] = useState<SensitivityResult[] | null>(null)
   const [breakEvenSurface, setBreakEvenSurface] = useState<BreakEvenSurface | null>(null)
@@ -1301,10 +1309,11 @@ function HousePageInner() {
   const [isRunningSensitivity, setIsRunningSensitivity] = useState(false)
   const [isRunningBreakEven, setIsRunningBreakEven] = useState(false)
   const [isRunningWhatIf, setIsRunningWhatIf] = useState(false)
-  
+
   // Collapsible state (must be before URL parsing useEffect)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showStrategies, setShowStrategies] = useState(false)
+  const [showHomeCondition, setShowHomeCondition] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
 
   const applyStateProfile = useCallback((profileKey: StateTaxProfileKey) => {
@@ -1321,7 +1330,7 @@ function HousePageInner() {
   const updateTaxField = useCallback((key: 'stateRate' | 'propertyTaxRate', value: number) => {
     setInputs(prev => ({ ...prev, [key]: value, stateProfile: 'custom' }))
   }, [])
-  
+
   // Parse URL params - comprehensive list of all SimulationParams fields
   useEffect(() => {
     const p = (key: string) => searchParams.get(key)
@@ -1330,19 +1339,19 @@ function HousePageInner() {
     const pBool = (key: string) => p(key) === '1' || p(key) === 'true'
     const pPct = (key: string) => pNum(key) !== null ? pNum(key)! / 100 : null  // Convert percentage to decimal
     const stateParam = p('state') as StateTaxProfileKey | null
-    
+
     // Auto-open collapsed sections BEFORE early return (even if no params change inputs)
     const hasAdvancedParams = p('hoa') || p('maint') || p('income') || p('fedbracket') || p('appr') || p('stock')
     const hasStrategyParams = p('fthb') || p('heloc')
     if (hasAdvancedParams) setShowAdvanced(true)
     if (hasStrategyParams) setShowStrategies(true)
-    
+
     // Check if any params exist
     if (!searchParams.toString()) return
-    
+
     setInputs(prev => {
       const updates: Partial<SimulationParams> = {}
-      
+
       // House
       if (stateParam && stateParam in stateTaxProfiles) {
         const profile = stateTaxProfiles[stateParam]
@@ -1359,18 +1368,18 @@ function HousePageInner() {
         updates.stateProfile = 'custom'
       }
       if (pNum('insurance') !== null) updates.insuranceAnnual = pNum('insurance')!
-      
+
       // Additional costs
       if (pPct('closing') !== null) updates.closingCostPercent = pNum('closing')!
       if (pNum('hoa') !== null) updates.hoaMonthly = pNum('hoa')!
       if (pNum('maint') !== null) updates.maintenanceAnnual = pNum('maint')!
-      
+
       // House hack / rental
       if (pBool('househack')) updates.houseHack = true
       if (pNum('rental') !== null) updates.rentalIncome = pNum('rental')!
       if (pPct('rentalgrowth') !== null) updates.rentalIncomeGrowth = pPct('rentalgrowth')!
       if (pPct('vacancy') !== null) updates.vacancyRate = pPct('vacancy')!
-      
+
       // Tax
       if (pNum('income') !== null) updates.w2Income = pNum('income')!
       if (pPct('fedbracket') !== null) updates.federalBracket = pPct('fedbracket')!
@@ -1380,7 +1389,7 @@ function HousePageInner() {
       }
       if (p('filing') === 'married') updates.filingStatus = 'married'
       if (pPct('buildingpct') !== null) updates.buildingValuePercent = pPct('buildingpct')!
-      
+
       // Alternative (rent)
       if (pNum('rent') !== null) updates.currentRent = pNum('rent')!
       if (pPct('rentgrowth') !== null) updates.rentGrowth = pPct('rentgrowth')!
@@ -1393,27 +1402,27 @@ function HousePageInner() {
       if (altParam && ['sp500', 'balanced', 'cash', 'custom'].includes(altParam)) {
         updates.alternativeInvestmentPreset = altParam as SimulationParams['alternativeInvestmentPreset']
       }
-      
+
       // Distributions
       if (pPct('appr') !== null) updates.appreciationMean = pPct('appr')!
       if (pPct('apprstd') !== null) updates.appreciationStdDev = pPct('apprstd')!
       if (pPct('stock') !== null) updates.stockReturnMean = pPct('stock')!
       if (pPct('stockstd') !== null) updates.stockReturnStdDev = pPct('stockstd')!
       if (pPct('corr') !== null) updates.marketCorrelation = pPct('corr')!
-      
+
       // Cost growth
       if (pPct('taxgrowth') !== null) updates.propertyTaxGrowth = pPct('taxgrowth')!
       if (pPct('insgrowth') !== null) updates.insuranceGrowth = pPct('insgrowth')!
-      
+
       // Exit costs
       if (pPct('sellcost') !== null) updates.sellingCostPercent = pNum('sellcost')!
       if (pPct('capgains') !== null) updates.capitalGainsTaxRate = pPct('capgains')!
-      
+
       // Simulation
       if (pInt('years') !== null) updates.years = pInt('years')!
       if (pInt('sims') !== null) updates.numSimulations = pInt('sims')!
       if (pInt('close') !== null) updates.closingMonth = pInt('close')!
-      
+
       // FTHB
       if (pBool('fthb')) {
         updates.firstTimeHomeBuyer = {
@@ -1425,7 +1434,7 @@ function HousePageInner() {
           taxCredit: pNum('taxcredit') || 0,
         }
       }
-      
+
       // HELOC
       if (pBool('heloc')) {
         updates.heloc = {
@@ -1436,13 +1445,13 @@ function HousePageInner() {
           deployToStocks: !pBool('helocnostocks'),
         }
       }
-      
+
       // Exit Strategy
       const exitParam = p('exit')
       if (exitParam && ['sell', 'hold', '1031', 'remote'].includes(exitParam)) {
         updates.exitStrategy = exitParam as 'sell' | 'hold' | '1031' | 'remote'
       }
-      
+
       // Tax Strategies
       if (pBool('costseg') || pBool('qbi') || pBool('1031')) {
         updates.taxStrategies = {
@@ -1460,26 +1469,39 @@ function HousePageInner() {
           },
         }
       }
-      
+
+      // Maintenance Shock Model
+      if (pBool('shock')) {
+        const shockAges = p('shockages')?.split(',').map(Number) || []
+        const components = defaultMaintenanceComponents.map((c, i) => ({
+          ...c,
+          ageAtPurchase: shockAges[i] ?? c.ageAtPurchase,
+        }))
+        updates.maintenanceShock = {
+          enabled: true,
+          components,
+        }
+      }
+
       // Multi-family setup
       const type = p('type')
       if (type && (type.includes('family') || type.includes('Family'))) {
-        const familyType = type.toLowerCase().includes('3') ? '3-family' 
-          : type.toLowerCase().includes('4') ? '4-family' 
+        const familyType = type.toLowerCase().includes('3') ? '3-family'
+          : type.toLowerCase().includes('4') ? '4-family'
           : '2-family'
-        
+
         const units = createMultiFamilyUnits(familyType)
-        
+
         const rental = pNum('rental')
         if (rental !== null) {
           const rentalUnits = units.filter(u => !u.ownerOccupied)
           const perUnit = rental / rentalUnits.length
           rentalUnits.forEach(u => { u.monthlyRent = Math.round(perUnit) })
         }
-        
+
         updates.units = units
         updates.houseHack = true
-        
+
         // Multi-family defaults (unless explicitly set in URL)
         if (pNum('hoa') === null) updates.hoaMonthly = 0
         // Scale insurance/maintenance by price (roughly 0.5% of value for insurance, 1% for maintenance)
@@ -1490,15 +1512,15 @@ function HousePageInner() {
         updates.rentalIncome = pNum('rental')!
         updates.houseHack = true
       }
-      
+
       return { ...prev, ...updates }
     })
   }, [searchParams])
-  
+
   const update = useCallback((key: keyof SimulationParams, value: number | boolean | object | string) => {
     setInputs(prev => ({ ...prev, [key]: value }))
   }, [])
-  
+
   const runSim = useCallback(() => {
     setIsRunning(true)
     // Use setTimeout to allow UI to update before heavy computation
@@ -1508,19 +1530,19 @@ function HousePageInner() {
       setIsRunning(false)
     }, 50)
   }, [inputs])
-  
+
   // Share URL generation (used by keyboard shortcuts and share button)
   const shareUrl = useCallback(() => {
     const params = new URLSearchParams()
     const d = defaultParams
-    
+
     const add = (key: string, val: number | string, def?: number | string) => {
       if (def === undefined || val !== def) params.set(key, val.toString())
     }
     const addPct = (key: string, val: number, def?: number) => {
       if (def === undefined || val !== def) params.set(key, (val * 100).toString())
     }
-    
+
     // Core params (always include)
     params.set('price', inputs.homePrice.toString())
     params.set('down', inputs.downPaymentPercent.toString())
@@ -1546,31 +1568,31 @@ function HousePageInner() {
     addPct('appr', inputs.appreciationMean, d.appreciationMean)
     addPct('stock', inputs.stockReturnMean, d.stockReturnMean)
     params.set('years', inputs.years.toString())
-    
+
     // Multi-family
     if (inputs.units.length > 0) {
       params.set('type', `${inputs.units.length}-family`)
       const totalRent = inputs.units.filter(u => !u.ownerOccupied).reduce((sum, u) => sum + u.monthlyRent, 0)
       params.set('rental', totalRent.toString())
     }
-    
+
     // FTHB
     if (inputs.firstTimeHomeBuyer?.enabled) {
       params.set('fthb', '1')
       if (inputs.firstTimeHomeBuyer.noPMI) params.set('nopmi', '1')
     }
-    
+
     // Exit Strategy
     if (inputs.exitStrategy && inputs.exitStrategy !== 'sell') {
       params.set('exit', inputs.exitStrategy)
     }
-    
+
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
     navigator.clipboard.writeText(url)
     setShareCopied(true)
     setTimeout(() => setShareCopied(false), 2000)
   }, [inputs])
-  
+
   // Transform simulation results for charts
   const chartData = useMemo(() => {
     if (!simResults) return []
@@ -1599,11 +1621,11 @@ function HousePageInner() {
       deltaMean: y.delta.mean,
     }))
   }, [simResults])
-  
+
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
-  
+
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-  
+
   const InputField = ({ label, value, onChange, suffix = '', hint = '', prefix = '', tooltip = '', min, max }: {
     label: string
     value: number | string
@@ -1616,7 +1638,7 @@ function HousePageInner() {
     max?: number
   }) => {
     const error = validationErrors[label]
-    
+
     const validateAndSet = (input: HTMLInputElement, val: string) => {
       const parsed = parseFloat(val)
       if (isNaN(parsed)) {
@@ -1624,7 +1646,7 @@ function HousePageInner() {
         setValidationErrors(prev => ({ ...prev, [label]: '' }))
         return
       }
-      
+
       // Check bounds
       if (min !== undefined && parsed < min) {
         setValidationErrors(prev => ({ ...prev, [label]: `Min: ${min}` }))
@@ -1640,11 +1662,11 @@ function HousePageInner() {
         setTimeout(() => setValidationErrors(prev => ({ ...prev, [label]: '' })), 2000)
         return
       }
-      
+
       setValidationErrors(prev => ({ ...prev, [label]: '' }))
       onChange(parsed)
     }
-    
+
     return (
       <div className="mb-4 relative">
         <label className="block text-sm font-medium text-[var(--content-muted)] mb-1.5">
@@ -1702,7 +1724,7 @@ function HousePageInner() {
       </div>
     )
   }
-  
+
   const Stat = ({ label, value, sub = '', color = 'white', delay = 0 }: {
     label: string
     value: string
@@ -1710,8 +1732,8 @@ function HousePageInner() {
     color?: 'white' | 'green' | 'red' | 'blue'
     delay?: number
   }) => (
-    <div 
-      className="bg-[var(--surface)] rounded-lg p-3 md:p-4 border border-[var(--border)] min-w-0 
+    <div
+      className="bg-[var(--surface)] rounded-lg p-3 md:p-4 border border-[var(--border)] min-w-0
                  transition-all duration-300 hover:bg-[var(--surface-muted)] hover:border-[var(--border)]
                  animate-in fade-in slide-in-from-bottom-2"
       style={{ animationDelay: `${delay}ms`, animationFillMode: 'backwards' }}
@@ -1725,9 +1747,9 @@ function HousePageInner() {
   )
 
   // Calculate rental summary for display
-  const rentalSummary = inputs.units.length > 0 
+  const rentalSummary = inputs.units.length > 0
     ? getUnitSummary(inputs.units)
-    : inputs.houseHack 
+    : inputs.houseHack
       ? { totalRent: inputs.rentalIncome, ownerPortion: 0.5, rentalPortion: 0.5 }
       : null
 
@@ -1741,9 +1763,9 @@ function HousePageInner() {
           Listings →
         </Link>
       </Header>
-      
+
       {/* ===== HERO: THE ESSENTIALS ===== */}
-      <div 
+      <div
         key={`hero-${inputs.homePrice}-${inputs.hoaMonthly}-${inputs.units.length}`}
         data-section="hero"
         className="bg-gradient-to-br from-[var(--surface-muted)] to-transparent border border-[var(--border)] rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6"
@@ -1775,7 +1797,7 @@ function HousePageInner() {
             </div>
             {validationErrors['price'] && <div className="absolute -bottom-4 left-0 text-xs text-error">{validationErrors['price']}</div>}
           </div>
-          
+
           {/* Down Payment */}
           <div className="relative">
             <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
@@ -1801,7 +1823,7 @@ function HousePageInner() {
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--content-subtle)]">%</span>
             </div>
           </div>
-          
+
           {/* Rate */}
           <div className="relative">
             <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
@@ -1827,7 +1849,7 @@ function HousePageInner() {
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--content-subtle)]">%</span>
             </div>
           </div>
-          
+
           {/* Your Rent */}
           <div className="relative">
             <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
@@ -1853,7 +1875,7 @@ function HousePageInner() {
               />
             </div>
           </div>
-          
+
           {/* Years */}
           <div className="relative">
             <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
@@ -1879,7 +1901,7 @@ function HousePageInner() {
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--content-subtle)]">yr</span>
             </div>
           </div>
-          
+
           {/* Closing Month */}
           <div className="relative">
             <label className="flex items-center gap-1 text-xs text-[var(--content-muted)] mb-1">
@@ -1898,7 +1920,7 @@ function HousePageInner() {
             </select>
           </div>
         </div>
-        
+
         {/* Rental Strategy Quick Toggle */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
           <span className="text-[var(--content-subtle)] text-xs sm:text-sm">Rental:</span>
@@ -1934,7 +1956,7 @@ function HousePageInner() {
               </button>
             ))}
           </div>
-          
+
           {/* Show rental income if applicable */}
           {rentalSummary && (
             <div className="ml-auto flex items-center gap-2 text-sm">
@@ -1943,7 +1965,7 @@ function HousePageInner() {
             </div>
           )}
         </div>
-        
+
         {/* Room Rental Input */}
         {inputs.units.length === 0 && inputs.houseHack && (
           <div className="flex items-center gap-4 p-3 bg-[var(--surface)] rounded-lg mb-4">
@@ -1968,16 +1990,16 @@ function HousePageInner() {
             <span className="text-[var(--content-subtle)] text-sm">/mo</span>
           </div>
         )}
-        
+
         {/* Multi-Family Units */}
         {inputs.units.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
             {inputs.units.map((unit, idx) => (
-              <div 
+              <div
                 key={unit.id}
                 className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                  unit.ownerOccupied 
-                    ? 'bg-success/20 border-success/50' 
+                  unit.ownerOccupied
+                    ? 'bg-success/20 border-success/50'
                     : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border)]'
                 }`}
                 onClick={() => {
@@ -2015,7 +2037,7 @@ function HousePageInner() {
             ))}
           </div>
         )}
-        
+
         {/* ===== ADVANCED SETTINGS (Collapsible) ===== */}
         <div className="mb-4">
           <button
@@ -2026,7 +2048,7 @@ function HousePageInner() {
             <span className={`icon-disclosure transition-transform ${showAdvanced ? 'rotate-90' : ''}`} aria-hidden="true" />
             Advanced Settings <kbd className="ml-2 px-1.5 py-0.5 bg-[var(--surface-muted)] rounded text-[10px] text-[var(--content-subtle)] hidden md:inline">A</kbd>
           </button>
-          
+
           {showAdvanced && (
             <div className="mt-4 p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -2112,8 +2134,8 @@ function HousePageInner() {
                       <>
                         <InputField label="Rent Growth μ" value={(inputs.rentGrowthMean * 100).toFixed(1)} onChange={(v: number) => update('rentGrowthMean', v / 100)} suffix="%" tooltip="Mean annual rent growth rate. Historical US average ~3%." min={-10} max={20} />
                         <InputField label="Rent Growth σ" value={(inputs.rentGrowthStdDev * 100).toFixed(1)} onChange={(v: number) => update('rentGrowthStdDev', v / 100)} suffix="%" tooltip="Volatility of annual rent growth. Higher = more uncertainty." min={0} max={20} />
-                        <InputField label="Rent-Home ρ" value={(inputs.rentHomeCorrelation * 100).toFixed(0)} onChange={(v: number) => update('rentHomeCorrelation', v / 100)} suffix="%" tooltip="Correlation between rent growth and home appreciation. 0.6-0.8 is realistic — rents and prices move together but not perfectly." min={0} max={100} />
-                        <InputField label="Rent Floor" value={((1 - inputs.rentFloor) * 100).toFixed(0)} onChange={(v: number) => update('rentFloor', 1 - v / 100)} suffix="% max drop" tooltip="Maximum annual rent decrease. Rents are sticky downward — landlords rarely cut rents as fast as prices fall." min={0} max={20} />
+                        <InputField label="Rent-Home ρ" value={(inputs.rentHomeCorrelation * 100).toFixed(0)} onChange={(v: number) => update('rentHomeCorrelation', v / 100)} suffix="%" tooltip="Correlation between rent growth and home appreciation. 0.6-0.8 is realistic - rents and prices move together but not perfectly." min={0} max={100} />
+                        <InputField label="Rent Floor" value={((1 - inputs.rentFloor) * 100).toFixed(0)} onChange={(v: number) => update('rentFloor', 1 - v / 100)} suffix="% max drop" tooltip="Maximum annual rent decrease. Rents are sticky downward - landlords rarely cut rents as fast as prices fall." min={0} max={20} />
                       </>
                     )}
                   </div>
@@ -2122,8 +2144,95 @@ function HousePageInner() {
             </div>
           )}
         </div>
-      
-        {/* ===== STRATEGIES (Collapsible) ===== */}
+        
+        {/* ===== HOME CONDITION (Maintenance Shock Model) ===== */}
+        <div className="mb-4">
+          <button
+            onClick={() => setShowHomeCondition(!showHomeCondition)}
+            className="flex items-center gap-2 text-[var(--content-subtle)] hover:text-[var(--content-muted)] text-sm transition-colors"
+          >
+            <span className={`icon-disclosure transition-transform ${showHomeCondition ? 'rotate-90' : ''}`} aria-hidden="true" />
+            Home Condition <span className="text-xs text-[var(--content-subtle)]">model major repair risk</span>
+          </button>
+        </div>
+        
+        {showHomeCondition && (
+          <div className="mt-2 p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl space-y-4">
+            {/* Shock Model Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-[var(--content)]">Maintenance Shock Model</div>
+                <div className="text-xs text-[var(--content-subtle)] mt-1">
+                  Replace smooth annual maintenance with realistic component-based failures. When enabled, base maintenance drops to 30% and major repairs are simulated probabilistically.
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={inputs.maintenanceShock?.enabled ?? false}
+                  onChange={(e) => {
+                    const enabled = e.target.checked
+                    setInputs(prev => ({
+                      ...prev,
+                      maintenanceShock: {
+                        enabled,
+                        components: enabled
+                          ? prev.maintenanceShock?.components ?? defaultMaintenanceComponents.map(c => ({ ...c }))
+                          : prev.maintenanceShock?.components ?? defaultMaintenanceComponents.map(c => ({ ...c })),
+                      },
+                    }))
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-[var(--surface-muted)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+            
+            {inputs.maintenanceShock?.enabled && (
+              <div className="space-y-3 pt-2 border-t border-[var(--border)]">
+                <div className="text-xs text-[var(--content-subtle)] mb-2">
+                  Set the current age of each major component. Older components have higher failure probability.
+                </div>
+                {(inputs.maintenanceShock?.components ?? defaultMaintenanceComponents).map((comp, idx) => (
+                  <div key={comp.name} className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-32">
+                      <div className="text-sm text-[var(--content-muted)]">{comp.name}</div>
+                      <div className="text-xs text-[var(--content-subtle)]">${comp.replacementCost.toLocaleString()} • {comp.lifespanYears}yr lifespan</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-[var(--content-subtle)]">Age:</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={comp.lifespanYears * 2}
+                        value={comp.ageAtPurchase}
+                        onChange={(e) => {
+                          const newAge = parseInt(e.target.value) || 0
+                          setInputs(prev => {
+                            const newComps = [...(prev.maintenanceShock?.components ?? defaultMaintenanceComponents)]
+                            newComps[idx] = { ...newComps[idx], ageAtPurchase: Math.max(0, Math.min(newAge, comp.lifespanYears * 2)) }
+                            return {
+                              ...prev,
+                              maintenanceShock: {
+                                ...prev.maintenanceShock!,
+                                components: newComps,
+                              },
+                            }
+                          })
+                        }}
+                        className="w-16 px-2 py-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-sm text-[var(--content)] text-center"
+                      />
+                      <span className="text-xs text-[var(--content-subtle)]">years</span>
+                    </div>
+                    <div className="text-xs text-[var(--content-subtle)] flex-1 text-right">
+                      {comp.ageAtPurchase === 0 ? 'Brand new' : comp.ageAtPurchase > comp.lifespanYears ? `⚠ ${comp.ageAtPurchase - comp.lifespanYears}yr overdue` : `${Math.round((1 - comp.ageAtPurchase / comp.lifespanYears) * 100)}% life remaining`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <div className="mb-4">
           <button
             onClick={() => setShowStrategies(!showStrategies)}
@@ -2133,7 +2242,7 @@ function HousePageInner() {
             <span className={`icon-disclosure transition-transform ${showStrategies ? 'rotate-90' : ''}`} aria-hidden="true" />
             Strategies / Scenarios <kbd className="ml-2 px-1.5 py-0.5 bg-[var(--surface-muted)] rounded text-[10px] text-[var(--content-subtle)] hidden md:inline">T</kbd>
           </button>
-        
+
         {showStrategies && (
           <div className="mt-4 space-y-4">
             {/* First-Time Homebuyer */}
@@ -2172,7 +2281,7 @@ function HousePageInner() {
                 </div>
               )}
             </div>
-            
+
             {/* HELOC Strategy */}
             <div className="p-4 bg-success-muted border border-success/20 rounded-xl">
               <label className="flex items-center gap-3 cursor-pointer">
@@ -2185,7 +2294,7 @@ function HousePageInner() {
                 <span className="text-success font-medium">HELOC → Equities (extract equity, deploy to stocks)</span>
               </label>
             </div>
-            
+
             {/* Advanced Tax Strategies */}
             <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
               <div className="text-[var(--content-subtle)] text-sm mb-3">Advanced Tax Strategies</div>
@@ -2223,7 +2332,7 @@ function HousePageInner() {
                 </label>
               </div>
             </div>
-            
+
             {/* Exit Strategy */}
             <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
               <div className="text-[var(--content-subtle)] text-sm mb-3">Exit Strategy</div>
@@ -2255,7 +2364,7 @@ function HousePageInner() {
                 {inputs.exitStrategy === 'remote' && '→ Move away, hire property manager (10% of rent), lose primary residence exemption'}
               </div>
             </div>
-            
+
             {/* Scenarios */}
             <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
               <div className="text-[var(--content-subtle)] text-sm mb-3">Risk Scenarios</div>
@@ -2292,12 +2401,12 @@ function HousePageInner() {
           </div>
         )}
         </div>
-        
+
         {/* Run Button */}
-        <button 
+        <button
           onClick={runSim}
           disabled={isRunning}
-          className="w-full py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 
+          className="w-full py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400
                      disabled:from-gray-700 disabled:to-gray-600 disabled:cursor-not-allowed
                      rounded-xl text-[var(--content)] font-bold text-base sm:text-lg shadow-lg shadow-blue-900/30
                      transition-all duration-200 hover:shadow-blue-900/50 hover:scale-[1.01] active:scale-[0.99]
@@ -2313,18 +2422,90 @@ function HousePageInner() {
             </>
           ) : (
             <>
-              <span className="group-hover:translate-x-0.5 transition-transform">Run Simulation</span> 
+              <span className="group-hover:translate-x-0.5 transition-transform">Run Simulation</span>
               <kbd className="ml-2 px-2 py-0.5 bg-[var(--surface-muted)] rounded text-sm hidden md:inline group-hover:bg-[var(--surface-muted)] transition-colors">R</kbd>
             </>
           )}
         </button>
       </div>
-      
+
       {/* Results */}
       {simResults && (
         <div data-section="results" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Rental Investment Metrics */}
           <QuickMetrics metrics={simResults.rentalMetrics} />
+
+          {/* Maintenance Shock Summary */}
+          {simResults.shockSummary && (
+            <Section title="Maintenance Shock Analysis">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                    <div className="text-xs text-[var(--content-subtle)]">Major Repair (Yr 1-3)</div>
+                    <div className="text-lg font-mono font-bold text-[var(--content)]">
+                      {(simResults.shockSummary.probRepairYears1to3 * 100).toFixed(0)}%
+                    </div>
+                    <div className="text-xs text-[var(--content-subtle)]">probability</div>
+                  </div>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                    <div className="text-xs text-[var(--content-subtle)]">Any Major Repair</div>
+                    <div className="text-lg font-mono font-bold text-[var(--content)]">
+                      {(simResults.shockSummary.probAnyRepair * 100).toFixed(0)}%
+                    </div>
+                    <div className="text-xs text-[var(--content-subtle)]">over {inputs.years} years</div>
+                  </div>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                    <div className="text-xs text-[var(--content-subtle)]">Avg Total Shock Cost</div>
+                    <div className="text-lg font-mono font-bold text-[var(--content)]">
+                      {formatCurrency(simResults.shockSummary.avgTotalShockCost)}
+                    </div>
+                    <div className="text-xs text-[var(--content-subtle)]">over {inputs.years} years</div>
+                  </div>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                    <div className="text-xs text-[var(--content-subtle)]">Emergency Fund Rec</div>
+                    <div className="text-lg font-mono font-bold text-[var(--content)]">
+                      {formatCurrency(simResults.shockSummary.emergencyFundRec)}
+                    </div>
+                    <div className="text-xs text-[var(--content-subtle)]">P90 worst-year</div>
+                  </div>
+                </div>
+                
+                {/* Per-component failure rates */}
+                <div className="mt-3">
+                  <div className="text-sm font-medium text-[var(--content-muted)] mb-2">Component Failure Probabilities</div>
+                  <div className="space-y-2">
+                    {simResults.shockSummary.componentFailureRates.map((comp) => (
+                      <div key={comp.name} className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
+                        <div className="text-sm text-[var(--content-muted)]">{comp.name}</div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-xs text-[var(--content-subtle)]">
+                            Avg replacement: Yr {comp.avgReplacementYear.toFixed(1)}
+                          </div>
+                          <div className="font-mono text-sm" style={{ color: comp.failureRate > 0.8 ? '#ef4444' : comp.failureRate > 0.4 ? '#f59e0b' : '#22c55e' }}>
+                            {(comp.failureRate * 100).toFixed(0)}%
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {simResults.shockSummary.cashCrunchYears.length > 0 && (
+                  <div className="mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                    <div className="text-sm font-medium text-red-400">⚠ Cash Crunch Risk</div>
+                    <div className="text-xs text-[var(--content-subtle)] mt-1">
+                      High shock probability in years {simResults.shockSummary.cashCrunchYears.join(', ')} may temporarily make renting more favorable.
+                      Consider keeping an emergency fund of {formatCurrency(simResults.shockSummary.emergencyFundRec)}.
+                    </div>
+                  </div>
+                )}
+                
+                <div className="text-xs text-[var(--content-subtle)] mt-2">
+                  💡 Base maintenance reduced to 30% of smooth budget ({formatCurrency((inputs.maintenanceAnnual || 0) * 0.3)}/yr). The remaining 70% is modeled as component-based shock events with realistic failure probabilities.
+                </div>
+              </div>
+            </Section>
+          )}
 
           {/* Summary Stats */}
           <Section title="Simulation Results">
@@ -2333,56 +2514,56 @@ function HousePageInner() {
               <span className="text-[var(--content-subtle)]"> • income tax {(inputs.stateRate * 100).toFixed(1)}% • property tax {(inputs.propertyTaxRate * 100).toFixed(2)}%</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-              <Stat 
-                label="Buy Wins Probability" 
+              <Stat
+                label="Buy Wins Probability"
                 value={formatPercent(simResults.finalStats.buyWinsProbability)}
                 color={simResults.finalStats.buyWinsProbability > 0.5 ? 'green' : 'red'}
                 sub={`${inputs.numSimulations.toLocaleString()} simulations`}
                 delay={0}
               />
-              <Stat 
+              <Stat
                 label={`Median Delta (Yr ${inputs.years})`}
                 value={formatCurrency(simResults.finalStats.delta.p50)}
                 color={simResults.finalStats.delta.p50 > 0 ? 'green' : 'red'}
                 sub="P50"
                 delay={50}
               />
-              <Stat 
-                label="Worst Case Delta" 
+              <Stat
+                label="Worst Case Delta"
                 value={formatCurrency(simResults.finalStats.delta.p10)}
                 sub="P10"
                 color="red"
                 delay={100}
               />
-              <Stat 
-                label="Best Case Delta" 
+              <Stat
+                label="Best Case Delta"
                 value={formatCurrency(simResults.finalStats.delta.p90)}
                 sub="P90"
                 color="green"
                 delay={150}
               />
-              <Stat 
-                label="Median Wealth (Buy)" 
+              <Stat
+                label="Median Wealth (Buy)"
                 value={formatCurrency(simResults.finalStats.wealthBuy.p50)}
                 sub="P50"
                 color="blue"
                 delay={200}
               />
-              <Stat 
-                label="Median Wealth (Rent)" 
+              <Stat
+                label="Median Wealth (Rent)"
                 value={formatCurrency(simResults.finalStats.wealthRent.p50)}
                 sub="P50"
                 delay={250}
               />
             </div>
-            
+
             {/* Share & Export Buttons */}
             <div className="flex justify-end gap-3 mt-4">
               <ExportPDF inputs={inputs} results={simResults} />
               <ShareImage inputs={inputs} results={simResults} />
             </div>
           </Section>
-          
+
           {/* Wealth Comparison with Bands */}
           <Section title="Wealth Trajectories (P10-P90 bands)">
             <div className="h-64 md:h-80">
@@ -2391,45 +2572,45 @@ function HousePageInner() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis dataKey="year" stroke="#9CA3AF" />
                   <YAxis stroke="#9CA3AF" tickFormatter={(v) => formatCurrency(v)} />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(v: number) => formatCurrency(v)}
                     contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
                   />
                   <Legend />
-                  
+
                   {/* Buy scenario band */}
-                  <Area 
-                    type="monotone" 
-                    dataKey="buyP90" 
+                  <Area
+                    type="monotone"
+                    dataKey="buyP90"
                     stroke="none"
-                    fill="#10B981" 
+                    fill="#10B981"
                     fillOpacity={0.1}
                     name="Buy P90"
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="buyP10" 
+                  <Area
+                    type="monotone"
+                    dataKey="buyP10"
                     stroke="none"
-                    fill="#1F2937" 
+                    fill="#1F2937"
                     fillOpacity={1}
                     name="Buy P10"
                   />
                   <Line type="monotone" dataKey="buyP50" stroke="#10B981" strokeWidth={2} name="Buy (Median)" dot={false} />
-                  
+
                   {/* Rent scenario band */}
-                  <Area 
-                    type="monotone" 
-                    dataKey="rentP90" 
+                  <Area
+                    type="monotone"
+                    dataKey="rentP90"
                     stroke="none"
-                    fill="#EF4444" 
+                    fill="#EF4444"
                     fillOpacity={0.1}
                     name="Rent P90"
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="rentP10" 
+                  <Area
+                    type="monotone"
+                    dataKey="rentP10"
                     stroke="none"
-                    fill="#1F2937" 
+                    fill="#1F2937"
                     fillOpacity={1}
                     name="Rent P10"
                   />
@@ -2438,7 +2619,7 @@ function HousePageInner() {
               </ResponsiveContainer>
             </div>
           </Section>
-          
+
           {/* Delta Distribution */}
           <Section title="Buy vs Rent Delta (P10 / P25 / P50 / P75 / P90)">
             <div className="h-56 md:h-72">
@@ -2447,35 +2628,35 @@ function HousePageInner() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis dataKey="year" stroke="#9CA3AF" />
                   <YAxis stroke="#9CA3AF" tickFormatter={(v) => formatCurrency(v)} />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(v: number) => formatCurrency(v)}
                     contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
                   />
                   <ReferenceLine y={0} stroke="#6B7280" strokeDasharray="3 3" />
-                  
+
                   {/* Outer band P10-P90 */}
                   <Area type="monotone" dataKey="deltaP90" stackId="1" stroke="none" fill="#3B82F6" fillOpacity={0.2} name="P90" />
                   <Area type="monotone" dataKey="deltaP75" stackId="2" stroke="none" fill="#3B82F6" fillOpacity={0.3} name="P75" />
                   <Area type="monotone" dataKey="deltaP50" stackId="3" stroke="none" fill="#3B82F6" fillOpacity={0.4} name="P50" />
                   <Area type="monotone" dataKey="deltaP25" stackId="4" stroke="none" fill="#3B82F6" fillOpacity={0.3} name="P25" />
                   <Area type="monotone" dataKey="deltaP10" stackId="5" stroke="none" fill="#3B82F6" fillOpacity={0.2} name="P10" />
-                  
+
                   <Line type="monotone" dataKey="deltaP50" stroke="#3B82F6" strokeWidth={2} name="Median" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </Section>
-          
+
           {/* Interactive Monte Carlo Histogram */}
           <Section title="Final Outcome Distribution (Interactive)">
-            <DeltaHistogram 
-              runs={simResults.runs} 
+            <DeltaHistogram
+              runs={simResults.runs}
               finalStats={simResults.finalStats}
               numSimulations={inputs.numSimulations}
               formatCurrency={formatCurrency}
             />
           </Section>
-          
+
           {/* HELOC Stats (if enabled) */}
           {inputs.heloc.enabled && (
             <Section title="HELOC Activity (Sample Runs)">
@@ -2493,7 +2674,7 @@ function HousePageInner() {
                   <h4 className="text-sm font-medium text-[var(--content-subtle)] mb-2">Avg Final HELOC Stocks (when used)</h4>
                   {(() => {
                     const runsWithHeloc = simResults.runs.filter(r => r.years[r.years.length - 1]?.stocksFromHeloc > 0)
-                    const avgStocks = runsWithHeloc.length > 0 
+                    const avgStocks = runsWithHeloc.length > 0
                       ? runsWithHeloc.reduce((sum, r) => sum + (r.years[r.years.length - 1]?.stocksFromHeloc || 0), 0) / runsWithHeloc.length
                       : 0
                     return (
@@ -2507,7 +2688,7 @@ function HousePageInner() {
               </div>
             </Section>
           )}
-          
+
           {/* Detailed Table */}
           <Section title="Year-by-Year Percentiles">
             {/* Mobile view: simplified card layout */}
@@ -2569,7 +2750,7 @@ function HousePageInner() {
               </table>
             </div>
           </Section>
-          
+
           {/* Distribution Stats */}
           <Section title="Final Distribution Details">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -2597,13 +2778,13 @@ function HousePageInner() {
               </div>
             </div>
           </Section>
-          
+
           {/* Interpretation */}
           <Section title="Interpretation">
             <div className="text-sm space-y-2">
               <p>
-                <strong>Probability Buy Wins:</strong> {formatPercent(simResults.finalStats.buyWinsProbability)} — 
-                In {Math.round(simResults.finalStats.buyWinsProbability * inputs.numSimulations).toLocaleString()} of {inputs.numSimulations.toLocaleString()} simulations, 
+                <strong>Probability Buy Wins:</strong> {formatPercent(simResults.finalStats.buyWinsProbability)} -
+                In {Math.round(simResults.finalStats.buyWinsProbability * inputs.numSimulations).toLocaleString()} of {inputs.numSimulations.toLocaleString()} simulations,
                 buying outperformed renting+investing over {inputs.years} years.
               </p>
               <p>
@@ -2616,13 +2797,13 @@ function HousePageInner() {
                 <strong>Upside (P90):</strong> In the best 10% of scenarios, buying wins by {formatCurrency(simResults.finalStats.delta.p90)}.
               </p>
               <p className="text-[var(--content-subtle)] mt-4">
-                Note: This simulation samples from normal distributions for both housing appreciation (μ={formatPercent(inputs.appreciationMean)}, σ={formatPercent(inputs.appreciationStdDev)}) 
-                and {alternativeInvestmentLabel} returns (μ={formatPercent(inputs.stockReturnMean)}, σ={formatPercent(inputs.stockReturnStdDev)}). 
-                Real returns have fat tails — extreme outcomes are more likely than this model suggests.
+                Note: This simulation samples from normal distributions for both housing appreciation (μ={formatPercent(inputs.appreciationMean)}, σ={formatPercent(inputs.appreciationStdDev)})
+                and {alternativeInvestmentLabel} returns (μ={formatPercent(inputs.stockReturnMean)}, σ={formatPercent(inputs.stockReturnStdDev)}).
+                Real returns have fat tails - extreme outcomes are more likely than this model suggests.
               </p>
             </div>
           </Section>
-          
+
           {/* Advanced Analysis Section */}
           <Section title="Advanced Analysis">
             <div className="flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6">
@@ -2651,7 +2832,7 @@ function HousePageInner() {
                   <><span className="hidden xs:inline">Sensitivity</span><span className="xs:hidden">Sens.</span> Analysis</>
                 )}
               </button>
-              
+
               <button
                 onClick={() => {
                   setIsRunningBreakEven(true)
@@ -2677,7 +2858,7 @@ function HousePageInner() {
                   <>Break-Even Surface</>
                 )}
               </button>
-              
+
               <button
                 onClick={() => {
                   setIsRunningWhatIf(true)
@@ -2704,7 +2885,7 @@ function HousePageInner() {
                 )}
               </button>
             </div>
-            
+
             {/* What-If Sensitivity Results */}
             {whatIfResults && (
               <div className="mb-8">
@@ -2712,20 +2893,20 @@ function HousePageInner() {
                 <p className="text-[var(--content-subtle)] text-xs sm:text-sm mb-3 sm:mb-4">
                   How do common changes affect your outcome? Base case: <span className="text-[var(--content)]">{formatCurrency(whatIfResults.baseP50Delta)}</span> median delta, <span className="text-[var(--content)]">{formatPercent(whatIfResults.baseWinRate)}</span> buy wins.
                 </p>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {whatIfResults.scenarios.map((scenario) => {
-                    const bgColor = scenario.direction === 'better' 
-                      ? 'bg-success-muted border-success/30 hover:border-success/50' 
+                    const bgColor = scenario.direction === 'better'
+                      ? 'bg-success-muted border-success/30 hover:border-success/50'
                       : scenario.direction === 'worse'
                         ? 'bg-error-muted border-error/30 hover:border-error/50'
                         : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border)]'
-                    
+
                     const deltaColor = scenario.deltaChange > 0 ? 'text-success' : scenario.deltaChange < 0 ? 'text-error' : 'text-[var(--content-subtle)]'
                     const winRateColor = scenario.winRateChange > 0.02 ? 'text-success' : scenario.winRateChange < -0.02 ? 'text-error' : 'text-[var(--content-subtle)]'
-                    
+
                     return (
-                      <div 
+                      <div
                         key={scenario.id}
                         className={`p-3 sm:p-4 rounded-xl border transition-colors ${bgColor}`}
                       >
@@ -2748,7 +2929,7 @@ function HousePageInner() {
                     )
                   })}
                 </div>
-                
+
                 <div className="mt-4 flex items-center gap-4 text-xs text-[var(--content-subtle)]">
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 rounded bg-success/30 border border-success/50" />
@@ -2765,7 +2946,7 @@ function HousePageInner() {
                 </div>
               </div>
             )}
-            
+
             {/* Sensitivity Analysis Results (Tornado Chart) */}
             {sensitivityResults && (
               <div className="mb-8">
@@ -2780,7 +2961,7 @@ function HousePageInner() {
                     const rightWidth = Math.abs(result.highP50Delta - result.baseP50Delta) / maxImpact * 100
                     const leftColor = result.lowP50Delta < result.baseP50Delta ? 'bg-error' : 'bg-success'
                     const rightColor = result.highP50Delta > result.baseP50Delta ? 'bg-success' : 'bg-error'
-                    
+
                     return (
                       <div key={result.parameter} className="flex items-center gap-2 sm:gap-4">
                         <div className="w-20 sm:w-32 text-xs sm:text-sm text-[var(--content-muted)] text-right shrink-0 truncate">
@@ -2789,7 +2970,7 @@ function HousePageInner() {
                         <div className="flex-1 flex items-center h-5 sm:h-6">
                           {/* Left bar (low value effect) */}
                           <div className="flex-1 flex justify-end">
-                            <div 
+                            <div
                               className={`h-4 sm:h-5 ${leftColor} rounded-l`}
                               style={{ width: `${Math.min(leftWidth, 100)}%` }}
                             />
@@ -2798,7 +2979,7 @@ function HousePageInner() {
                           <div className="w-px h-5 sm:h-6 bg-[var(--border)]" />
                           {/* Right bar (high value effect) */}
                           <div className="flex-1">
-                            <div 
+                            <div
                               className={`h-4 sm:h-5 ${rightColor} rounded-r`}
                               style={{ width: `${Math.min(rightWidth, 100)}%` }}
                             />
@@ -2818,13 +2999,13 @@ function HousePageInner() {
                 </div>
               </div>
             )}
-            
+
             {/* Break-Even Surface (Heatmap) */}
             {breakEvenSurface && (
               <div>
                 <h4 className="text-base sm:text-lg font-bold text-[var(--content)] mb-3 sm:mb-4">Break-Even Surface</h4>
                 <p className="text-[var(--content-subtle)] text-xs sm:text-sm mb-3 sm:mb-4">
-                  Win probability (buy vs rent) across {breakEvenSurface.xLabel} × {breakEvenSurface.yLabel}. 
+                  Win probability (buy vs rent) across {breakEvenSurface.xLabel} × {breakEvenSurface.yLabel}.
                   Green = buy wins, Red = rent wins, Yellow = break-even.
                 </p>
                 <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
@@ -2836,7 +3017,7 @@ function HousePageInner() {
                         {breakEvenSurface.xLabel}
                       </div>
                     </div>
-                    
+
                     {/* Grid */}
                     <div className="flex">
                       {/* Y-axis */}
@@ -2846,7 +3027,7 @@ function HousePageInner() {
                         </div>
                         {breakEvenSurface.yValues.slice().reverse().map((y, i) => (
                           <div key={i} className="text-[10px] sm:text-xs text-[var(--content-subtle)] h-8 sm:h-10 flex items-center justify-end">
-                            {breakEvenSurface.yLabel.includes('%') 
+                            {breakEvenSurface.yLabel.includes('%')
                               ? `${y.toFixed(0)}%`
                               : breakEvenSurface.yLabel.includes('Rate')
                                 ? `${(y * 100).toFixed(1)}%`
@@ -2855,7 +3036,7 @@ function HousePageInner() {
                           </div>
                         ))}
                       </div>
-                      
+
                       {/* Heatmap grid */}
                       <div>
                         {breakEvenSurface.yValues.slice().reverse().map((_, yi) => {
@@ -2869,7 +3050,7 @@ function HousePageInner() {
                                 const r = winRate < 0.5 ? 255 : Math.round(255 * (1 - (winRate - 0.5) * 2))
                                 const g = winRate > 0.5 ? 255 : Math.round(255 * winRate * 2)
                                 const b = 0
-                                
+
                                 return (
                                   <div
                                     key={xi}
@@ -2884,7 +3065,7 @@ function HousePageInner() {
                             </div>
                           )
                         })}
-                        
+
                         {/* X-axis labels */}
                         <div className="flex mt-1">
                           {breakEvenSurface.xValues.map((x, i) => (
@@ -2897,7 +3078,7 @@ function HousePageInner() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-[var(--content-subtle)]">
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 sm:w-4 sm:h-4 rounded" style={{ backgroundColor: 'rgb(255, 0, 0)' }} />
@@ -2915,7 +3096,7 @@ function HousePageInner() {
               </div>
             )}
           </Section>
-          
+
           {/* Wealth Timeline - Rent vs Buy over time */}
           <Section title="📈 Wealth Over Time">
             <WealthTimelineChart inputs={inputs} simResults={simResults} />
@@ -2929,31 +3110,31 @@ function HousePageInner() {
           <Section title="📊 Amortization Schedule">
             <AmortizationChart inputs={inputs} />
           </Section>
-          
+
           {/* Math Explained Section */}
           <MathExplained inputs={inputs} simResults={simResults} />
-          
+
           {/* National Comparison Section */}
           <Section title="🇺🇸 Market Context">
             <NationalComparison userParams={inputs} userResults={simResults} />
           </Section>
         </div>
       )}
-      
+
       {/* Loading skeleton while simulation runs */}
       {isRunning && !simResults && (
         <ResultsSkeleton />
       )}
-      
+
       {!simResults && !isRunning && (
         <div className="text-center py-12 text-[var(--content-subtle)] animate-in fade-in duration-300">
           Configure parameters above and click &quot;Run Simulation&quot; to see Monte Carlo results.
         </div>
       )}
-      
+
       {/* Progress bar at top during simulation */}
       <SimulationProgress isRunning={isRunning} total={inputs.numSimulations} />
-      
+
       {/* Keyboard Shortcuts */}
       <KeyboardShortcuts
         onRunSimulation={runSim}
